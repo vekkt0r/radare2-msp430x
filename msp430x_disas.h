@@ -48,6 +48,13 @@ enum msp430_twoop_opcodes {
 	MSP430_AND,
 };
 
+enum msp430_oneop_r_opcodes_x {
+	MSP430_RRCM,
+	MSP430_RRAM,
+	MSP430_RLAM,
+	MSP430_RRUM,
+};
+
 enum msp430_twoop_opcodes_x {
 	MSP430_MOVA,
 	MSP430_CMPA,

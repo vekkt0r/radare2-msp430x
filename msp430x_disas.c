@@ -25,6 +25,13 @@ static const char *two_op_x_instrs[] = {
 	[MSP430_SUBA]	= "suba",
 };
 
+static const char *one_op_r_instrs[] = {
+	[MSP430_RRCM]	= "rrcm",
+	[MSP430_RRAM]	= "rram",
+	[MSP430_RLAM]	= "rlam",
+	[MSP430_RRUM]	= "rrum",
+};
+
 static const char *one_op_instrs[] = {
 	[MSP430_RCR]	= "rcr",
 	[MSP430_SWPB]	= "swpb",
@@ -381,6 +388,11 @@ static int decode_addressing_mode (ut16 instr, ut16 dst, ut16 op2, struct msp430
 	return ret;
 }
 
+static ut8 is_valid_mova(ut16 instr)
+{
+	return 0;
+}
+
 static int decode_addressing_mode_x (ut16 instr, ut16 dst, ut16 op2, struct msp430_cmd *cmd)
 {
 	int ret;
@@ -391,6 +403,9 @@ static int decode_addressing_mode_x (ut16 instr, ut16 dst, ut16 op2, struct msp4
 
 	switch (get_twoop_x_opcode(instr)) {
 	case MSP430_MOVA:
+		// TODO: Do some table lookup instead of all these special cases
+		if (!is_valid_mova(instr))
+			return -1;
 		as = get_mova_as(instr);
 		ad = get_mova_ad(instr);
 		break;
@@ -710,6 +725,33 @@ static int decode_oneop_opcode_x(ut16 instr, ut16 op, struct msp430_cmd *cmd) {
 	return ret;
 }
 
+static ut8 get_inst_id(ut16 instr)
+{
+	return (instr >> 8) & 0x3;
+}
+
+static int decode_oneop_r_opcode(ut16 instr, struct msp430_cmd *cmd)
+{
+	int ret = -2;
+	ut8 opcode = get_inst_id(instr);
+	switch (opcode) {
+	case MSP430_RRCM:
+	case MSP430_RRAM:
+	case MSP430_RLAM:
+	case MSP430_RRUM:
+		if (((instr >> 4) & 0xe) != 0x4)
+			return -1;
+		snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s",
+			  one_op_r_instrs[opcode]);
+		// TODO: Protection
+		strcat(cmd->instr, instr & (1<<4) ? ".w" : ".a");
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "#%d, r%d", ((instr >> 10) & 0xf) + 1, get_dst(instr));
+		ret = 2;
+	}
+	return ret;
+}
+
 static int get_oneop_opcode(ut16 instr)
 {
 	return (instr >> 7) & 0x7;
@@ -835,6 +877,8 @@ int msp430x_decode_command(const ut8 *in, struct msp430_cmd *cmd)
                 if (ret > 0)
                         return ret;
                 ret = decode_oneop_opcode (instr, operand1, cmd);
+        } else if (opcode == 0) {
+		ret = decode_oneop_r_opcode(instr, cmd);
         }
 
 	return ret;
