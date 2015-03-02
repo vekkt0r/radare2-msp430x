@@ -3,6 +3,40 @@
 
 #include "msp430x_disas.h"
 
+typedef struct  {
+	char name[8];
+	ut16 id;
+	ut16 mask;
+	ut8  as;
+	ut8  ad;
+} opcode_table;
+
+
+static const opcode_table oppocodo[] = {
+
+	// Emulated instructions
+	{"bra",    0x0030, 0xf0ff, MSP430_ADDR_DIRECT,   MSP430_ADDR_NONE},
+	{"bra",    0x0020, 0xf0ff, MSP430_ADDR_ABS20,    MSP430_ADDR_NONE},
+
+	// Two operand instructions
+	{"mova",   0x0030, 0xf0f0, MSP430_ADDR_INDEXED,  MSP430_ADDR_DIRECT},
+	{"mova",   0x0080, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
+	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
+	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
+
+	// One operand instrucitons
+	{"rrcm.a", 0x0040, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+
+	// Third table
+	{"calla", 0x1340, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_DIRECT},
+	{"calla", 0x1350, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_INDEXED},
+
+	{"pushm", 0x1400, 0xff00, MSP430_ADDR_NONE, MSP430_ADDR_REPEAT},
+
+	// Do not remove
+	{'\0',     0,      0,     0},
+};
+
 static const char *two_op_instrs[] = {
 	[MSP430_MOV]	= "mov",
 	[MSP430_ADD]	= "add",
@@ -574,6 +608,74 @@ static int decode_twoop_opcode(ut16 instr, ut16 src, ut16 op2, struct msp430_cmd
 	return ret;
 }
 
+static ut8 output_430x(ut16 instr, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
+	int ret = -1;
+	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s",
+		  op->name);
+
+	char dstbuf[16] = {0};
+
+	switch (op->as) {
+	case MSP430_ADDR_DIRECT:
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "r%d", get_src(instr));
+		break;
+	case MSP430_ADDR_INDEXED:
+		// TODO: Probably broken sign
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "%c0x%04x(r%d)", (op2 ^ 0xffff) > 0 ? '-' : '+', op2, get_src(instr));
+		ret = 4;
+		break;
+	case MSP430_ADDR_REPEAT:
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "#%d", ((instr >> 10) & 0xf) + 1);
+		ret = 2;
+		break;
+	case MSP430_ADDR_IMM20:
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "#0x%04x", (get_src(instr) << 16) | op2);
+		ret = 4;
+		break;
+	case MSP430_ADDR_ABS20:
+		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  "&0x%04x", (get_src(instr) << 16) | op2);
+		ret = 4;
+		break;
+	}
+
+	switch (op->ad) {
+	case MSP430_ADDR_DIRECT:
+		snprintf (dstbuf, sizeof(dstbuf),
+			  ", r%d", get_dst(instr));
+		break;
+	case MSP430_ADDR_INDEXED:
+		snprintf (dstbuf, sizeof(dstbuf),
+			  ", 0x%04x(r%d)", op2, get_dst(instr));
+		break;
+	case MSP430_ADDR_REPEAT:
+		snprintf (dstbuf, sizeof(dstbuf),
+			  ", #%d, r%d", ((instr >> 4) & 0xf) + 1, get_dst(instr));
+		break;
+	case MSP430_ADDR_IMM20:
+		snprintf (dstbuf, sizeof(dstbuf),
+			  ", &0x%04x", get_dst(instr)<<16 | op2);
+		break;
+	}
+	strncat (cmd->operands, dstbuf, MSP430_INSTR_MAXLEN - 1
+		 - strlen (cmd->operands));
+	return ret;
+}
+
+static ut8 decode_430x(ut16 instr, ut16 op2, struct msp430_cmd *cmd)
+{
+	for (int i = 0; oppocodo[i].name[0] != '\0'; i++) {
+		if ((instr & oppocodo[i].mask) == oppocodo[i].id) {
+			return output_430x(instr, op2, &oppocodo[i], cmd);
+		}
+	}
+	return -1;
+}
+
 static ut8 get_jmp_opcode(ut16 instr)
 {
 	return instr >> 13;
@@ -852,6 +954,9 @@ int msp430x_decode_command(const ut8 *in, struct msp430_cmd *cmd)
 	ut8 opcode;
 
 	r_mem_copyendian((ut8*)&instr, in, sizeof (ut16), LIL_ENDIAN);
+	r_mem_copyendian((ut8*)&operand1, in + 2, sizeof (ut16), LIL_ENDIAN);
+	ret = decode_430x(instr, operand1, cmd);
+	return ret;
 
 	opcode = get_twoop_opcode (instr);
 
