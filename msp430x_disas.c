@@ -15,23 +15,47 @@ typedef struct  {
 static const opcode_table oppocodo[] = {
 
 	// Emulated instructions
-	{"bra",    0x0030, 0xf0ff, MSP430_ADDR_DIRECT,   MSP430_ADDR_NONE},
-	{"bra",    0x0020, 0xf0ff, MSP430_ADDR_ABS20,    MSP430_ADDR_NONE},
+	//{"bra",    0x0030, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_NONE},
+	//{"bra",    0x0020, 0xf0ff, MSP430_ADDR_ABS20,    MSP430_ADDR_NONE},
+	{"inc",    0x5310, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
+	{"incd",   0x5320, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
 
 	// Two operand instructions
+	{"mova",   0x0000, 0xf0f0, MSP430_ADDR_INDIRECT,   MSP430_ADDR_DIRECT},
+	{"mova",   0x0010, 0xf0f0, MSP430_ADDR_INDIRECT_POST_INC, MSP430_ADDR_DIRECT},
+	{"mova",   0x0020, 0xf0f0, MSP430_ADDR_ABS20,    MSP430_ADDR_DIRECT},
 	{"mova",   0x0030, 0xf0f0, MSP430_ADDR_INDEXED,  MSP430_ADDR_DIRECT},
+	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
+	{"mova",   0x0070, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_INDEXED},
 	{"mova",   0x0080, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
-	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
-	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
+	{"cmpa",   0x0090, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
+	{"adda",   0x00a0, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
+	{"suba",   0x00b0, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
+	{"mova",   0x00c0, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_DIRECT},
+	{"cmpa",   0x00d0, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_DIRECT},
+	{"adda",   0x00e0, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_DIRECT},
+	{"suba",   0x00f0, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_DIRECT},
 
-	// One operand instrucitons
+	// One operand instructions
 	{"rrcm.a", 0x0040, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rram.a", 0x0140, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rlam.a", 0x0240, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rrum.a", 0x0340, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rrcm",   0x0050, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rram",   0x0150, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rlam",   0x0250, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
+	{"rrum",   0x0350, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT},
 
 	// Third table
 	{"calla", 0x1340, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_DIRECT},
 	{"calla", 0x1350, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_INDEXED},
 
 	{"pushm", 0x1400, 0xff00, MSP430_ADDR_NONE, MSP430_ADDR_REPEAT},
+
+	// Normal stuffs
+	{"mov",   0x4000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"add",   0x5000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"addc",  0x6000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
 
 	// Do not remove
 	{'\0',     0,      0,     0},
@@ -108,6 +132,14 @@ static ut8 get_twoop_x_opcode(ut16 instr)
 	return op & 0x03;
 }
 
+static int get_src (instr) {
+	return (instr >> 8) & 0xF;
+}
+
+static int get_dst (instr) {
+	return instr & 0xF;
+}
+
 static ut8 get_as(ut16 instr)
 {
 	return (instr >> 4) & 3;
@@ -142,12 +174,9 @@ static ut8 get_mova_ad(ut16 instr)
 
 }
 
-static int get_src (instr) {
-	return (instr >> 8) & 0xF;
-}
-
-static int get_dst (instr) {
-	return instr & 0xF;
+static ut8 is_ext_word(ut16 instr)
+{
+	return ((instr >> 11) & 0x1f) == 3;
 }
 
 static ut8 is_valid_twoop(ut8 opcode)
@@ -608,69 +637,151 @@ static int decode_twoop_opcode(ut16 instr, ut16 src, ut16 op2, struct msp430_cmd
 	return ret;
 }
 
-static ut8 output_430x(ut16 instr, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
+static ut8 out_src_dst(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op, ut16 ext)
+{
+	char postfix = 0;
 	int ret = -1;
-	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s",
-		  op->name);
-
-	char dstbuf[16] = {0};
-
-	switch (op->as) {
+	switch (asd) {
 	case MSP430_ADDR_DIRECT:
-		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  "r%d", get_src(instr));
+		snprintf (buf, max, "r%d", reg);
+		ret = 2;
 		break;
 	case MSP430_ADDR_INDEXED:
 		// TODO: Probably broken sign
-		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  "%c0x%04x(r%d)", (op2 ^ 0xffff) > 0 ? '-' : '+', op2, get_src(instr));
+		snprintf (buf, max,
+			  "0x%04x(r%d)", op, reg);
+			  //"%c0x%04x(r%d)", (op ^ 0xffff) > 0 ? '+' : '-', op, reg);
 		ret = 4;
 		break;
-	case MSP430_ADDR_REPEAT:
-		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  "#%d", ((instr >> 10) & 0xf) + 1);
+	case MSP430_ADDR_INDIRECT_POST_INC:
+		postfix = '+';
+		// same same, fall through
+	case MSP430_ADDR_INDIRECT:
+		snprintf (buf, max, "@r%d%c", reg, postfix);
 		ret = 2;
 		break;
+	case MSP430_ADDR_IMM:
+		snprintf (buf, max, "#0x%04x", ext << 16 | op);
+		ret = 4;
+		break;
+	// Special addressing
+	case MSP430_ADDR_REPEAT:
+		snprintf (buf, max, "#%d", ((reg >> 2) & 0xf) + 1);
+		ret = 2;
+		break;
+	case MSP430_ADDR_REL:
+		snprintf (buf, max, "0x%04x(r%d)", (ext << 16) | op, reg);
+		ret = 4;
+		break;
 	case MSP430_ADDR_IMM20:
-		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  "#0x%04x", (get_src(instr) << 16) | op2);
+		snprintf (buf, max, "#0x%04x", (reg << 16) | op);
 		ret = 4;
 		break;
 	case MSP430_ADDR_ABS20:
-		snprintf (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  "&0x%04x", (get_src(instr) << 16) | op2);
+		snprintf (buf, max, "&0x%04x", (reg << 16) | op);
 		ret = 4;
 		break;
+	case MSP430_ADDR_ABS:
+		snprintf (buf, max, "&0x%04x", (ext << 16) | op);
+		ret = 4;
+		break;
+	case MSP430_ADDR_CG1:
+		snprintf (buf, max, "#%d", 4*(as - 1));
+		ret = 2;
+		break;
+	case MSP430_ADDR_CG2:
+		// TODO: FFh should be same size as instruction (ff, ffff, ffffff)
+		snprintf (buf, max, "#%d", as == 3 ? 0xff : as);
+		ret = 2;
+		break;
+	}
+	return ret;
+}
+
+static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
+	int ret = -1;
+	ut8 as, asd;
+	ut8 ad, add;
+	ut8 src_ext = 0;
+	ut8 dst_ext = 0;
+	char postfix = 0;
+
+	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
+		  op->name, ext ? 'x' : '\0');
+
+	if (op->as == MSP430_ADDR_AUTO) {
+		as = get_as(instr);
+
+		src_ext = (ext >> 7) & 0xf;
+		dst_ext = get_dst(ext);
+	} else {
+		as = op->as;
 	}
 
-	switch (op->ad) {
+	if (as > 1 && get_src(instr) == MSP430_SR)
+		asd = MSP430_ADDR_CG1;
+	else if (get_src(instr) == MSP430_R3)
+		asd = MSP430_ADDR_CG2;
+	else if (as && get_src(instr) == MSP430_SR)
+		asd = MSP430_ADDR_ABS;
+	// TODO: Find another way to do this
+	else if (as != MSP430_ADDR_REPEAT && as != MSP430_ADDR_ABS20 && get_src(instr) == MSP430_PC)
+		asd = MSP430_ADDR_REL;
+	else
+		asd = as;
+
+	if (op->ad == MSP430_ADDR_AUTO) {
+		ad = get_ad(instr);
+
+		if (ad && get_dst(instr) == MSP430_SR)
+			add = MSP430_ADDR_ABS;
+		else
+			add = ad;
+	} else
+		add = op-> ad;
+
+	ret = out_src_dst(cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  as, asd,
+			  get_src(instr), op1, src_ext);
+
+	char dstbuf[16] = {0};
+
+	// TODO: Use out_src_dst() for printing
+	switch (add) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (dstbuf, sizeof(dstbuf),
 			  ", r%d", get_dst(instr));
 		break;
 	case MSP430_ADDR_INDEXED:
 		snprintf (dstbuf, sizeof(dstbuf),
-			  ", 0x%04x(r%d)", op2, get_dst(instr));
+			  ", 0x%04x(r%d)", op1, get_dst(instr));
+		ret = 4;
 		break;
 	case MSP430_ADDR_REPEAT:
 		snprintf (dstbuf, sizeof(dstbuf),
 			  ", #%d, r%d", ((instr >> 4) & 0xf) + 1, get_dst(instr));
 		break;
+	case MSP430_ADDR_ABS:
+		snprintf (dstbuf, sizeof(dstbuf),
+			  ", &0x%04x", (dst_ext << 16) | op1);
+		ret = 4;
+		break;
 	case MSP430_ADDR_IMM20:
 		snprintf (dstbuf, sizeof(dstbuf),
-			  ", &0x%04x", get_dst(instr)<<16 | op2);
+			  ", &0x%04x", get_dst(instr)<<16 | op1);
 		break;
 	}
+
 	strncat (cmd->operands, dstbuf, MSP430_INSTR_MAXLEN - 1
 		 - strlen (cmd->operands));
 	return ret;
 }
 
-static ut8 decode_430x(ut16 instr, ut16 op2, struct msp430_cmd *cmd)
+static ut8 decode_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, struct msp430_cmd *cmd)
 {
 	for (int i = 0; oppocodo[i].name[0] != '\0'; i++) {
 		if ((instr & oppocodo[i].mask) == oppocodo[i].id) {
-			return output_430x(instr, op2, &oppocodo[i], cmd);
+			return output_430x(instr, ext, op1, op2, &oppocodo[i], cmd);
 		}
 	}
 	return -1;
@@ -950,12 +1061,21 @@ int msp430x_decode_command(const ut8 *in, struct msp430_cmd *cmd)
 {
 	int ret = -1;
 	ut16 instr;
+	ut16 ext = 0;
 	ut16 operand1, operand2;
 	ut8 opcode;
 
 	r_mem_copyendian((ut8*)&instr, in, sizeof (ut16), LIL_ENDIAN);
+
+	if (is_ext_word(instr)) {
+		in += 2;
+		ext = instr;
+		r_mem_copyendian((ut8*)&instr, in, sizeof (ut16), LIL_ENDIAN);
+	}
+
 	r_mem_copyendian((ut8*)&operand1, in + 2, sizeof (ut16), LIL_ENDIAN);
-	ret = decode_430x(instr, operand1, cmd);
+	r_mem_copyendian((ut8*)&operand2, in + 4, sizeof (ut16), LIL_ENDIAN);
+	ret = decode_430x(instr, ext, operand1, operand2, cmd);
 	return ret;
 
 	opcode = get_twoop_opcode (instr);
