@@ -32,6 +32,19 @@ class TestDisas(unittest.TestCase):
         }
         self.helper_test_set(ops)
 
+    def test_jumps(self):
+        ops = {
+            '0120': 'jnz $+0x0004',
+            '0124': 'jz $+0x0004',
+            '0128': 'jnc $+0x0004',
+            '012c': 'jc $+0x0004',
+            '0130': 'jn $+0x0004',
+            '0134': 'jge $+0x0004',
+            '0138': 'jl $+0x0004',
+            '013c': 'jmp $+0x0004',
+        }
+        self.helper_test_set(ops)
+
     def test_emulated(self):
         ops = {
             #'004a': 'bra r10',
