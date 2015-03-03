@@ -28,6 +28,7 @@ class TestDisas(unittest.TestCase):
             '0b4a': 'mov r10, r11',
             '824a2211': 'mov r10, &0x1122',
             '894a0000': 'mov r10, 0x0000(r9)',
+            'b24011332211': 'mov #0x3311, &0x1122'
         }
         self.helper_test_set(ops)
 
@@ -41,7 +42,11 @@ class TestDisas(unittest.TestCase):
         ops = {
             'c01819423020': 'movx &0x12030, r9',
             '4118824a3020': 'movx r10, &0x12030',
-            #'411db240ccbb4423': 'movx #0xabbcc, &0x12344',
+            '411db240ccbb4423': 'movx #0xabbcc, &0x12344',
+            '411d9242ccbb4423': 'movx &0xabbcc, &0x12344',
+            '411d9942ccbb4423': 'movx &0xabbcc, 0x12344(r9)',
+            '411d9249ccbb4423': 'movx 0xabbcc(r9), &0x12344',
+            '411d9240ccbb4423': 'movx 0xabbcc(r0), &0x12344',
         }
         self.helper_test_set(ops)
 

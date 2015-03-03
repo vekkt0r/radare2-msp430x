@@ -25,7 +25,7 @@ static const opcode_table oppocodo[] = {
 	{"mova",   0x0010, 0xf0f0, MSP430_ADDR_INDIRECT_POST_INC, MSP430_ADDR_DIRECT},
 	{"mova",   0x0020, 0xf0f0, MSP430_ADDR_ABS20,    MSP430_ADDR_DIRECT},
 	{"mova",   0x0030, 0xf0f0, MSP430_ADDR_INDEXED,  MSP430_ADDR_DIRECT},
-	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_IMM20},
+	{"mova",   0x0060, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_ABS20},
 	{"mova",   0x0070, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_INDEXED},
 	{"mova",   0x0080, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
 	{"cmpa",   0x0090, 0xf0f0, MSP430_ADDR_IMM20,    MSP430_ADDR_DIRECT},
@@ -640,59 +640,54 @@ static int decode_twoop_opcode(ut16 instr, ut16 src, ut16 op2, struct msp430_cmd
 static ut8 out_src_dst(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op, ut16 ext)
 {
 	char postfix = 0;
-	int ret = -1;
+	int ret = 0;
 	switch (asd) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (buf, max, "r%d", reg);
-		ret = 2;
 		break;
 	case MSP430_ADDR_INDEXED:
 		// TODO: Probably broken sign
 		snprintf (buf, max,
-			  "0x%04x(r%d)", op, reg);
+			  "0x%04x(r%d)", (ext << 16) | op, reg);
 			  //"%c0x%04x(r%d)", (op ^ 0xffff) > 0 ? '+' : '-', op, reg);
-		ret = 4;
+		ret = 2;
 		break;
 	case MSP430_ADDR_INDIRECT_POST_INC:
 		postfix = '+';
 		// same same, fall through
 	case MSP430_ADDR_INDIRECT:
 		snprintf (buf, max, "@r%d%c", reg, postfix);
-		ret = 2;
 		break;
 	case MSP430_ADDR_IMM:
 		snprintf (buf, max, "#0x%04x", ext << 16 | op);
-		ret = 4;
+		ret = 2;
 		break;
 	// Special addressing
 	case MSP430_ADDR_REPEAT:
 		snprintf (buf, max, "#%d", ((reg >> 2) & 0xf) + 1);
-		ret = 2;
 		break;
 	case MSP430_ADDR_REL:
 		snprintf (buf, max, "0x%04x(r%d)", (ext << 16) | op, reg);
-		ret = 4;
+		ret = 2;
 		break;
 	case MSP430_ADDR_IMM20:
 		snprintf (buf, max, "#0x%04x", (reg << 16) | op);
-		ret = 4;
+		ret = 2;
 		break;
 	case MSP430_ADDR_ABS20:
 		snprintf (buf, max, "&0x%04x", (reg << 16) | op);
-		ret = 4;
+		ret = 2;
 		break;
 	case MSP430_ADDR_ABS:
 		snprintf (buf, max, "&0x%04x", (ext << 16) | op);
-		ret = 4;
+		ret = 2;
 		break;
 	case MSP430_ADDR_CG1:
 		snprintf (buf, max, "#%d", 4*(as - 1));
-		ret = 2;
 		break;
 	case MSP430_ADDR_CG2:
 		// TODO: FFh should be same size as instruction (ff, ffff, ffffff)
 		snprintf (buf, max, "#%d", as == 3 ? 0xff : as);
-		ret = 2;
 		break;
 	}
 	return ret;
@@ -711,7 +706,6 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 
 	if (op->as == MSP430_ADDR_AUTO) {
 		as = get_as(instr);
-
 		src_ext = (ext >> 7) & 0xf;
 		dst_ext = get_dst(ext);
 	} else {
@@ -742,40 +736,21 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 	} else
 		add = op-> ad;
 
-	//printf("AUto is %d %d\n", as, asd);
-
-	ret = out_src_dst(cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			  as, asd,
-			  get_src(instr), op1, src_ext);
+	ret = 2;
+	ret += out_src_dst(cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			   as, asd,
+			   get_src(instr), op1, src_ext);
 
 	char dstbuf[16] = {0};
 
-	// TODO: Use out_src_dst() for printing
-	switch (add) {
-	case MSP430_ADDR_DIRECT:
-		snprintf (dstbuf, sizeof(dstbuf),
-			  ", r%d", get_dst(instr));
-		break;
-	case MSP430_ADDR_INDEXED:
-		snprintf (dstbuf, sizeof(dstbuf),
-			  ", 0x%04x(r%d)", op1, get_dst(instr));
-		ret = 4;
-		break;
-	case MSP430_ADDR_REPEAT:
-		snprintf (dstbuf, sizeof(dstbuf),
-			  ", #%d, r%d", ((instr >> 4) & 0xf) + 1, get_dst(instr));
-		break;
-	case MSP430_ADDR_ABS:
-		snprintf (dstbuf, sizeof(dstbuf),
-			  ", &0x%04x", (dst_ext << 16) | op1);
-		ret = 4;
-		break;
-	case MSP430_ADDR_IMM20:
-		snprintf (dstbuf, sizeof(dstbuf),
-			  ", &0x%04x", get_dst(instr)<<16 | op1);
-		break;
-	}
+	ret += out_src_dst(dstbuf, sizeof(dstbuf),
+			   ad, add,
+			   get_dst(instr), ret > 2 ? op2 : op1, dst_ext);
 
+	if (cmd->operands[0]) {
+		strncat(cmd->operands, ", ", MSP430_INSTR_MAXLEN - 1
+			- strlen (cmd->operands));
+	}
 	strncat (cmd->operands, dstbuf, MSP430_INSTR_MAXLEN - 1
 		 - strlen (cmd->operands));
 	return ret;
