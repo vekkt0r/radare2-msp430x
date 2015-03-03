@@ -17,6 +17,17 @@ class TestDisas(unittest.TestCase):
     def test_standard(self):
         ops = {
             '294a': 'mov @r10, r9',
+            '295a': 'add @r10, r9',
+            '296a': 'addc @r10, r9',
+            '1a4072a3': 'mov 0xa372(r0), r10', # PC relative
+            '0a49': 'mov r9, r10',
+            '3a402211': 'mov #0x1122, r10',
+            '1a422211': 'mov &0x1122, r10',
+            '2a4a': 'mov @r10, r10',
+            '3a4a': 'mov @r10+, r10',
+            '0b4a': 'mov r10, r11',
+            '824a2211': 'mov r10, &0x1122',
+            '894a0000': 'mov r10, 0x0000(r9)',
         }
         self.helper_test_set(ops)
 

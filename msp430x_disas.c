@@ -724,6 +724,8 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 		asd = MSP430_ADDR_CG2;
 	else if (as && get_src(instr) == MSP430_SR)
 		asd = MSP430_ADDR_ABS;
+	else if (as == MSP430_ADDR_INDIRECT_POST_INC && get_src(instr) == MSP430_PC)
+		asd = MSP430_ADDR_IMM;
 	// TODO: Find another way to do this
 	else if (as != MSP430_ADDR_REPEAT && as != MSP430_ADDR_ABS20 && get_src(instr) == MSP430_PC)
 		asd = MSP430_ADDR_REL;
@@ -739,6 +741,8 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 			add = ad;
 	} else
 		add = op-> ad;
+
+	//printf("AUto is %d %d\n", as, asd);
 
 	ret = out_src_dst(cmd->operands, MSP430_INSTR_MAXLEN - 1,
 			  as, asd,
