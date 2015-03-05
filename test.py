@@ -45,6 +45,21 @@ class TestDisas(unittest.TestCase):
         }
         self.helper_test_set(ops)
 
+    def test_oneops(self):
+        ops = {
+            '0a10': 'rrc r10',
+            '1210aabb': 'rrc &0xbbaa',
+            '2a10': 'rrc @r10',
+            '3a10': 'rrc @r10+',
+            '3a12': 'push @r10+',
+            'ba10': 'swpb @r10+',
+            'ba12': 'call @r10+',
+            '0013': 'reti',
+            '8911': 'sxt r9',
+            '0343': 'nop',
+        }
+        self.helper_test_set(ops)
+
     def test_emulated(self):
         ops = {
             #'004a': 'bra r10',

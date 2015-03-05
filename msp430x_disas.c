@@ -19,6 +19,7 @@ static const opcode_table oppocodo[] = {
 	//{"bra",    0x0020, 0xf0ff, MSP430_ADDR_ABS20,    MSP430_ADDR_NONE},
 	{"inc",    0x5310, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
 	{"incd",   0x5320, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
+	{"nop",    0x4303, 0xffff, MSP430_ADDR_NONE, MSP430_ADDR_NONE},
 
 	// Two operand instructions
 	{"mova",   0x0000, 0xf0f0, MSP430_ADDR_INDIRECT,   MSP430_ADDR_DIRECT},
@@ -66,6 +67,15 @@ static const opcode_table oppocodo[] = {
 	{"jge",   0x3400, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
 	{"jl",    0x3800, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
 	{"jmp",   0x3c00, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
+
+	// Oneops
+	{"rrc",   0x1000, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"swpb",  0x1080, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"rra",   0x1100, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"sxt",   0x1180, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"push",  0x1200, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"call",  0x1280, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
+	{"reti",  0x1300, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_NONE},
 
 	// Do not remove
 	{'\0',     0,      0,     0},
@@ -474,18 +484,6 @@ static ut8 get_jmp_cond(ut16 instr)
 	return (instr >> 10 ) & 7;
 }
 
-static ut8 decode_jump2(char *buf, ssize_t max, ut16 instr, struct msp430_cmd *cmd)
-{
-	ut16 addr = instr & 0x3FF;
-	cmd->jmp_addr = addr >= 0x300 ? (st16)((0xFE00 | addr) * 2 + 2) : (addr & 0x1FF) * 2 + 2;
-	snprintf(buf, max, "$%c0x%04x", addr >= 0x300 ? '-' : '+',
-		 addr >= 0x300 ? 0x400 - ((addr & 0x1FF) * 2 + 2) : (addr & 0x1FF) * 2 + 2);
-	cmd->jmp_cond = get_jmp_cond (instr);
-	cmd->opcode = get_jmp_opcode (instr);
-	cmd->type = MSP430_JUMP;
-	return 0;
-}
-
 static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
 	int ret = -1;
 	ut8 as, asd;
@@ -521,6 +519,8 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 			asd = MSP430_ADDR_REL;
 		else
 			asd = as;
+	} else {
+		asd = as;
 	}
 
 	if (op->ad == MSP430_ADDR_AUTO) {
@@ -540,15 +540,11 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 
 	char dstbuf[16] = {0};
 
-	if (add != MSP430_ADDR_JUMP) {
-		ret += decode_addr(dstbuf, sizeof(dstbuf),
-				   ad, add,
-				   get_dst(instr), ret > 2 ? op2 : op1, dst_ext);
-		// TODO: This should really not be done here
-		ret += ret > 2 ? 2 : 0;
-	} else {
-		ret += decode_jump2(dstbuf, sizeof(dstbuf), instr, cmd);
-	}
+	ret += decode_addr(dstbuf, sizeof(dstbuf),
+			   ad, add,
+			   get_dst(instr), ret > 2 ? op2 : op1, dst_ext);
+	// TODO: This should really not be done here, extension word compensation
+	ret += ret > 2 ? 2 : 0;
 
 	if (cmd->operands[0]) {
 		strncat(cmd->operands, ", ", MSP430_INSTR_MAXLEN - 1
@@ -559,11 +555,51 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 	return ret;
 }
 
+static ut8 output_jump(ut16 instr, ut16 ext, struct msp430_cmd *cmd)
+{
+	ut16 addr = instr & 0x3FF;
+	cmd->jmp_addr = addr >= 0x300 ? (st16)((0xFE00 | addr) * 2 + 2) : (addr & 0x1FF) * 2 + 2;
+	snprintf(cmd->operands, MSP430_INSTR_MAXLEN - 1, "$%c0x%04x", addr >= 0x300 ? '-' : '+',
+		 addr >= 0x300 ? 0x400 - ((addr & 0x1FF) * 2 + 2) : (addr & 0x1FF) * 2 + 2);
+	cmd->jmp_cond = get_jmp_cond (instr);
+	cmd->opcode = get_jmp_opcode (instr);
+	cmd->type = MSP430_JUMP;
+	return 2;
+}
+
+static ut8 output_oneop(ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
+{
+	ut8 asd = get_as(instr);
+	ut8 reg = get_dst(instr);
+
+	cmd->operands[0] = 0;
+
+	if (get_dst(instr) == MSP430_SR)
+		asd = MSP430_ADDR_ABS;
+
+	ut8 ret = 2 + decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
+				  0, asd, reg, op1, ext);
+	return ret;
+}
+
 static ut8 decode_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, struct msp430_cmd *cmd)
 {
+	// TODO: Use pointer instead of repeating array name
 	for (int i = 0; oppocodo[i].name[0] != '\0'; i++) {
 		if ((instr & oppocodo[i].mask) == oppocodo[i].id) {
-			return output_430x(instr, ext, op1, op2, &oppocodo[i], cmd);
+			snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
+				  oppocodo[i].name, ext ? 'x' : '\0');
+
+			switch (oppocodo[i].ad) {
+			case MSP430_ADDR_JUMP:
+				return output_jump(instr, ext, cmd);
+
+			case MSP430_ADDR_ONEOP:
+				return output_oneop(instr, ext, op1, cmd);
+
+			default:
+				return output_430x(instr, ext, op1, op2, &oppocodo[i], cmd);
+			}
 		}
 	}
 	return -1;
