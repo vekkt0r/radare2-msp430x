@@ -578,7 +578,7 @@ static ut8 output_oneop(ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
 		asd = MSP430_ADDR_ABS;
 
 	ut8 ret = 2 + decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
-				  0, asd, reg, op1, ext);
+				  0, asd, reg, op1, get_dst(ext));
 	return ret;
 }
 
