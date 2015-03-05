@@ -11,10 +11,9 @@ class TestDisas(unittest.TestCase):
 
     def helper_test_set(self, ops):
         for k, v in ops.iteritems():
-            print 'testing \'%s\'' % k
             self.assertEqual(self.dis(k), v)
 
-    def test_standard(self):
+    def test_twoop(self):
         ops = {
             '294a': 'mov @r10, r9',
             '295a': 'add @r10, r9',
@@ -28,7 +27,16 @@ class TestDisas(unittest.TestCase):
             '0b4a': 'mov r10, r11',
             '824a2211': 'mov r10, &0x1122',
             '894a0000': 'mov r10, 0x0000(r9)',
-            'b24011332211': 'mov #0x3311, &0x1122'
+            'b24011332211': 'mov #0x3311, &0x1122',
+            '0a85': 'sub r5, r10',
+            '0a75': 'subc r5, r10',
+            '0a95': 'cmp r5, r10',
+            '0aa5': 'dadd r5, r10',
+            '1ab3': 'bit #1, r10',
+            '1ac3': 'bic #1, r10',
+            '1ad3': 'bis #1, r10',
+            '0ae5': 'xor r5, r10',
+            '0af5': 'and r5, r10',
         }
         self.helper_test_set(ops)
 
@@ -42,6 +50,7 @@ class TestDisas(unittest.TestCase):
             '0134': 'jge $+0x0004',
             '0138': 'jl $+0x0004',
             '013c': 'jmp $+0x0004',
+            '5d3d': 'jmp $+0x02bc',
         }
         self.helper_test_set(ops)
 
@@ -56,13 +65,38 @@ class TestDisas(unittest.TestCase):
             'ba12': 'call @r10+',
             '0013': 'reti',
             '8911': 'sxt r9',
-            '0343': 'nop',
+
         }
         self.helper_test_set(ops)
 
     def test_emulated(self):
         ops = {
-            #'004a': 'bra r10',
+            '0343': 'nop',
+            '0049': 'br r9',
+            '3040baab': 'br #0xabba',
+            '1042baab': 'br &0xabba',
+            '0563': 'adc r5',
+            '8263baab': 'adc &0xabba',
+            '0543': 'clr r5',
+            '12c3': 'clrc',
+            '22c2': 'clrn',
+            '22c3': 'clrz',
+            '05a3': 'dadc r5',
+            '1583': 'dec r5',
+            '2583': 'decd r5',
+            '32c2': 'dint',
+            '32d2': 'eint',
+            '1553': 'inc r5',
+            '2553': 'incd r5',
+            '3541': 'pop r5',
+            '3041': 'ret',
+            '0555': 'rla r5',
+            '0565': 'rlc r5',
+            '0573': 'sbc r5',
+            '12d3': 'setc',
+            '22d2': 'setn',
+            '22d3': 'setz',
+            '0593': 'tst r5',
         }
         self.helper_test_set(ops)
 

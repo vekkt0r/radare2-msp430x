@@ -14,11 +14,32 @@ typedef struct  {
 static const opcode_table opcodes[] = {
 
 	// Emulated instructions
-	//{"bra",    0x0030, 0xf0f0, MSP430_ADDR_DIRECT,   MSP430_ADDR_NONE},
-	//{"bra",    0x0020, 0xf0ff, MSP430_ADDR_ABS20,    MSP430_ADDR_NONE},
-	{"inc",    0x5310, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
-	{"incd",   0x5320, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_AUTO},
-	{"nop",    0x4303, 0xffff, MSP430_ADDR_NONE, MSP430_ADDR_NONE},
+	{"nop",    0x4303, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"ret",    0x4130, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"adc",    0x6300, 0xff30, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"br",     0x4000, 0xf08f, MSP430_ADDR_AUTO,    MSP430_ADDR_NONE},
+	{"clr",    0x4300, 0xff30, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"clrc",   0xc312, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"clrn",   0xc222, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"clrz",   0xc322, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"dadc",   0xa300, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"dec",    0x8310, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"decd",   0x8320, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"dint",   0xc232, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"eint",   0xd232, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"inc",    0x5310, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"incd",   0x5320, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"pop",    0x4130, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"rla",    0x5500, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"rlc",    0x6500, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"sbc",    0x7300, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"setc",   0xd312, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"setn",   0xd222, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"setz",   0xd322, 0xffff, MSP430_ADDR_NONE,    MSP430_ADDR_NONE},
+	{"tst",    0x9300, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+
+	{"inc",    0x5310, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
+	{"incd",   0x5320, 0xfff0, MSP430_ADDR_NONE,    MSP430_ADDR_AUTO},
 
 	// Two operand instructions
 	{"mova",   0x0000, 0xf0f0, MSP430_ADDR_INDIRECT,   MSP430_ADDR_DIRECT},
@@ -52,10 +73,19 @@ static const opcode_table opcodes[] = {
 
 	{"pushm", 0x1400, 0xff00, MSP430_ADDR_NONE, MSP430_ADDR_REPEAT},
 
-	// Normal stuffs
+	// Two operand instructions
 	{"mov",   0x4000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
 	{"add",   0x5000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
 	{"addc",  0x6000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"subc",  0x7000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"sub",   0x8000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"cmp",   0x9000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"dadd",  0xa000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"bit",   0xb000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"bic",   0xc000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"bis",   0xd000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"xor",   0xe000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
+	{"and",   0xf000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO},
 
 	// Jumps
 	{"jnz",   0x2000, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
@@ -67,7 +97,7 @@ static const opcode_table opcodes[] = {
 	{"jl",    0x3800, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
 	{"jmp",   0x3c00, 0xfc00, MSP430_ADDR_NONE,  MSP430_ADDR_JUMP},
 
-	// Oneops
+	// One operand instructions
 	{"rrc",   0x1000, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
 	{"swpb",  0x1080, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
 	{"rra",   0x1100, 0xf380, MSP430_ADDR_NONE,  MSP430_ADDR_ONEOP},
@@ -116,6 +146,7 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op
 	switch (asd) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (buf, max, "r%d", reg);
+		ret = 0;
 		break;
 	case MSP430_ADDR_INDEXED:
 		// TODO: Probably broken sign
@@ -163,8 +194,8 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op
 	return ret;
 }
 
-static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
-	int ret = -1;
+static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
+	int ret;
 	ut8 as, asd;
 	ut8 ad, add;
 	ut8 src_ext = 0;
@@ -173,8 +204,6 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 
 	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
 		  op->name, ext ? 'x' : '\0');
-
-	cmd->operands[0] = 0;
 
 	if (op->as == MSP430_ADDR_AUTO) {
 		as = get_as(instr);
@@ -212,20 +241,17 @@ static ut8 output_430x(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_ta
 	} else
 		add = op-> ad;
 
-	ret = 2;
-	ret += decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			   as, asd,
-			   get_src(instr), op1, src_ext);
+	ret = decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			  as, asd,
+			  get_src(instr), op1, src_ext);
 
 	char dstbuf[16] = {0};
 
 	ret += decode_addr(dstbuf, sizeof(dstbuf),
 			   ad, add,
-			   get_dst(instr), ret > 2 ? op2 : op1, dst_ext);
-	// TODO: This should really not be done here, extension word compensation
-	ret += ret > 2 ? 2 : 0;
+			   get_dst(instr), ret > 0 ? op2 : op1, dst_ext);
 
-	if (cmd->operands[0]) {
+	if (cmd->operands[0] && dstbuf[0]) {
 		strncat(cmd->operands, ", ", MSP430_INSTR_MAXLEN - 1
 			- strlen (cmd->operands));
 	}
@@ -284,7 +310,7 @@ static ut8 decode_430x(ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_c
 				return 2 + output_oneop(instr, ext, op1, cmd);
 
 			default:
-				return 2 + output_430x(instr, ext, op1, op2, ot, cmd);
+				return 2 + output_twoop(instr, ext, op1, op2, ot, cmd);
 			}
 		}
 	}
@@ -310,5 +336,6 @@ int msp430x_decode_command(const ut8 *in, struct msp430_cmd *cmd)
 	r_mem_copyendian((ut8*)&operand1, in + 2, sizeof (ut16), LIL_ENDIAN);
 	r_mem_copyendian((ut8*)&operand2, in + 4, sizeof (ut16), LIL_ENDIAN);
 	ret = decode_430x(instr, operand1, operand2, extension, cmd);
-	return ret;//+ extension ? 2 : 0;
+	ret += extension ? 2 : 0;
+	return ret;
 }
