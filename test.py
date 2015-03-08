@@ -155,6 +155,11 @@ class TestDisas(unittest.TestCase):
             '5a0a': 'rlam #3, r10',
             '5a0f': 'rrum #4, r10',
             '4c181210aabb': 'rrcx &0xcbbaa',
+            '83131020': 'calla &0x32010',
+            '3414': 'pushm.a #4, r4',
+            '3415': 'pushm #4, r4',
+            '3116': 'popm.a #4, r4',
+            '3117': 'popm #4, r4',
         }
         self.helper_test_set(ops)
 

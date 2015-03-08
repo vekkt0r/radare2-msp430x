@@ -70,9 +70,12 @@ static const opcode_table opcodes[] = {
 	{"rrum",   0x0350, 0xf3f0, MSP430_ADDR_REPEAT,   MSP430_ADDR_DIRECT, MSP430_X},
 
 	// Third table extended
-	{"calla", 0x1340, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_DIRECT, MSP430_X},
-	{"calla", 0x1350, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_INDEXED, MSP430_X},
-	{"pushm", 0x1400, 0xff00, MSP430_ADDR_NONE, MSP430_ADDR_REPEAT, MSP430_X},
+	{"calla",   0x1340, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_DIRECT, MSP430_X},
+	{"calla",   0x1350, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_INDEXED, MSP430_X},
+	{"pushm.a", 0x1400, 0xff00, MSP430_ADDR_PP,   MSP430_ADDR_DIRECT, MSP430_X},
+	{"pushm",   0x1500, 0xff00, MSP430_ADDR_PP ,  MSP430_ADDR_DIRECT, MSP430_X},
+	{"popm.a",  0x1600, 0xff00, MSP430_ADDR_PP,   MSP430_ADDR_POPM, MSP430_X},
+	{"popm",    0x1700, 0xff00, MSP430_ADDR_PP,   MSP430_ADDR_POPM, MSP430_X},
 
 	// Two operand instructions
 	{"mov",   0x4000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO, MSP430_TWOOP},
@@ -168,6 +171,12 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 	case MSP430_ADDR_REPEAT:
 		snprintf (buf, max, "#%d", ((reg >> 2) & 0xf) + 1);
 		break;
+	case MSP430_ADDR_PP:
+		snprintf (buf, max, "#%d", op);
+		break;
+	case MSP430_ADDR_POPM:
+		snprintf (buf, max, "r%d", op);
+		break;
 	case MSP430_ADDR_REL:
 		snprintf (buf, max, "0x%04x(r%d)", (ext << 16) | op, reg);
 		ret = 2;
@@ -234,7 +243,12 @@ static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_t
 		as = op->as;
 	}
 
-	if (as != MSP430_ADDR_NONE) {
+	// TODO: One more hack..
+	if (as == MSP430_ADDR_PP) {
+		asd = as;
+		op1 = ((instr >> 4) & 0xf) + 1;
+	}
+	else if (as != MSP430_ADDR_NONE) {
 		asd = decode_addr_mode(as, get_src(instr));
 	} else {
 		asd = as;
@@ -248,6 +262,9 @@ static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_t
 		else
 			add = ad;
 		dst_ext = get_dst(ext);
+	} else if (op->ad == MSP430_ADDR_POPM) {
+		add = MSP430_ADDR_POPM;
+		op1 = get_dst(instr) + (instr >> 4)&0xf;
 	} else
 		add = op-> ad;
 
