@@ -3,6 +3,10 @@
 
 #include "msp430x_disas.h"
 
+/* Known "issues":
+   - mov #0, offset(reg) is shown as clr offset(reg) instead of mov
+ */
+
 typedef struct  {
 	char name[8];
 	ut16 id;
@@ -139,11 +143,11 @@ static ut8 is_extension_word(ut16 instr)
 	return ((instr >> 11) & 0x1f) == 3;
 }
 
-static ut8 decode_addr(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op, ut16 ext)
+static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext)
 {
 	char postfix = 0;
 	int ret = 0;
-	switch (asd) {
+	switch (mode) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (buf, max, "r%d", reg);
 		ret = 0;
@@ -184,14 +188,34 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 as, ut8 asd, ut8 reg, ut16 op
 		ret = 2;
 		break;
 	case MSP430_ADDR_CG1:
-		snprintf (buf, max, "#%d", 4*(as - 1));
+		snprintf (buf, max, "#%d", 4*(konst - 1));
 		break;
 	case MSP430_ADDR_CG2:
 		// TODO: FFh should be same size as instruction (ff, ffff, ffffff)
-		snprintf (buf, max, "#%d", as == 3 ? 0xff : as);
+		snprintf (buf, max, "#%d", konst == 3 ? 0xff : konst);
 		break;
 	}
 	return ret;
+}
+
+static ut8 decode_addr_mode(ut8 mode, ut8 dst)
+{
+	ut8 dec;
+	if (mode > 1 && dst == MSP430_SR)
+		dec = MSP430_ADDR_CG1;
+	else if (dst == MSP430_R3)
+		dec = MSP430_ADDR_CG2;
+	else if (mode && dst == MSP430_SR)
+		dec = MSP430_ADDR_ABS;
+	else if (mode == MSP430_ADDR_INDIRECT_POST_INC && dst == MSP430_PC)
+		dec = MSP430_ADDR_IMM;
+	// TODO: Find another way to do this
+	else if (mode != MSP430_ADDR_REPEAT && mode != MSP430_ADDR_ABS20 && dst == MSP430_PC)
+		dec = MSP430_ADDR_REL;
+	else
+		dec = mode;
+
+	return dec;
 }
 
 static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
@@ -214,19 +238,7 @@ static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_t
 	}
 
 	if (as != MSP430_ADDR_NONE) {
-		if (as > 1 && get_src(instr) == MSP430_SR)
-			asd = MSP430_ADDR_CG1;
-		else if (get_src(instr) == MSP430_R3)
-			asd = MSP430_ADDR_CG2;
-		else if (as && get_src(instr) == MSP430_SR)
-			asd = MSP430_ADDR_ABS;
-		else if (as == MSP430_ADDR_INDIRECT_POST_INC && get_src(instr) == MSP430_PC)
-			asd = MSP430_ADDR_IMM;
-		// TODO: Find another way to do this
-		else if (as != MSP430_ADDR_REPEAT && as != MSP430_ADDR_ABS20 && get_src(instr) == MSP430_PC)
-			asd = MSP430_ADDR_REL;
-		else
-			asd = as;
+		asd = decode_addr_mode(as, get_src(instr));
 	} else {
 		asd = as;
 	}
@@ -284,15 +296,11 @@ static ut8 output_jump(ut16 instr, ut16 ext, struct msp430_cmd *cmd)
 
 static ut8 output_oneop(ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
 {
-	ut8 asd = get_as(instr);
+	ut8 as = get_as(instr);
 	ut8 reg = get_dst(instr);
-
-	if (get_dst(instr) == MSP430_SR)
-		asd = MSP430_ADDR_ABS;
-
-	ut8 ret = decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			      0, asd, reg, op1, get_dst(ext));
-	return ret;
+	ut8 mode = decode_addr_mode(as, reg);
+	return decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
+			   as, mode, reg, op1, get_dst(ext));
 }
 
 static ut8 decode_430x(ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd)

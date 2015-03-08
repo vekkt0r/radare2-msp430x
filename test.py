@@ -37,6 +37,7 @@ class TestDisas(unittest.TestCase):
             '1ad3': 'bis #1, r10',
             '0ae5': 'xor r5, r10',
             '0af5': 'and r5, r10',
+            '8443faff': 'clr 0xfffa(r4)', # Should be a mov, but why?
         }
         self.helper_test_set(ops)
 
@@ -65,7 +66,12 @@ class TestDisas(unittest.TestCase):
             'ba12': 'call @r10+',
             '0013': 'reti',
             '8911': 'sxt r9',
-
+            'b01296c0': 'call #0xc096',
+            'b212': 'call #8',
+            'a212': 'call #4',
+            'a312': 'call #2',
+            '9312': 'call #1',
+            '8312': 'call #0',
         }
         self.helper_test_set(ops)
 
