@@ -92,6 +92,7 @@ enum msp430_cmd_type {
 	MSP430_ONEOP,
 	MSP430_TWOOP,
 	MSP430_JUMP,
+	MPS430_X,
 };
 
 enum msp430_registers {

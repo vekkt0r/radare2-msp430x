@@ -32,12 +32,16 @@ class TestDisas(unittest.TestCase):
             '0a75': 'subc r5, r10',
             '0a95': 'cmp r5, r10',
             '0aa5': 'dadd r5, r10',
+            '5ab3': 'bit.b #1, r10',
             '1ab3': 'bit #1, r10',
             '1ac3': 'bic #1, r10',
             '1ad3': 'bis #1, r10',
             '0ae5': 'xor r5, r10',
             '0af5': 'and r5, r10',
-            '8443faff': 'clr 0xfffa(r4)', # Should be a mov, but why?
+            '8443faff': 'clr 0xfffa(r4)', # Should be a mov, not sure
+                                          # why it's not emulated for
+                                          # indexed destination
+            '4e4f': 'mov.b r15, r14',
         }
         self.helper_test_set(ops)
 
@@ -115,6 +119,7 @@ class TestDisas(unittest.TestCase):
             '411d9942ccbb4423': 'movx &0xabbcc, 0x12344(r9)',
             '411d9249ccbb4423': 'movx 0xabbcc(r9), &0x12344',
             '411d9240ccbb4423': 'movx 0xabbcc(r0), &0x12344',
+            '4a18c443faff': 'clrx.b 0xafffa(r4)',
         }
         self.helper_test_set(ops)
 
