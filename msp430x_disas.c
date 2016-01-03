@@ -200,6 +200,9 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		// TODO: FFh should be same size as instruction (ff, ffff, ffffff)
 		snprintf (buf, max, "#%d", konst == 3 ? 0xff : konst);
 		break;
+	default:
+		buf[0] = '\0';
+		break;
 	}
 	return ret;
 }

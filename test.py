@@ -13,6 +13,13 @@ class TestDisas(unittest.TestCase):
         for k, v in ops.iteritems():
             self.assertEqual(self.dis(k), v)
 
+    def test_regressions(self):
+        ops = {
+            # Uninitalized operand
+            '3441b01252803041' : 'pop r4\ncall #0x8052\nret'
+        }
+        self.helper_test_set(ops)
+
     def test_twoop(self):
         ops = {
             '294a': 'mov @r10, r9',
