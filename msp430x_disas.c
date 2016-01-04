@@ -143,10 +143,11 @@ static ut8 is_extension_word(ut16 instr)
 	return ((instr >> 11) & 0x1f) == 3;
 }
 
-static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext)
+static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *jmp_addr)
 {
 	char postfix = 0;
 	int ret = 0;
+	st32 jmp = 0;
 	switch (mode) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (buf, max, "r%d", reg);
@@ -165,7 +166,8 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		snprintf (buf, max, "@r%d%c", reg, postfix);
 		break;
 	case MSP430_ADDR_IMM:
-		snprintf (buf, max, "#0x%04x", ext << 16 | op);
+		jmp = ext << 16 | op;
+		snprintf (buf, max, "#0x%04x", jmp);
 		ret = 2;
 		break;
 	case MSP430_ADDR_REPEAT:
@@ -182,7 +184,8 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		ret = 2;
 		break;
 	case MSP430_ADDR_IMM20:
-		snprintf (buf, max, "#0x%04x", (reg << 16) | op);
+		jmp = (reg << 16) | op;
+		snprintf (buf, max, "#0x%04x", jmp);
 		ret = 2;
 		break;
 	case MSP430_ADDR_ABS20:
@@ -204,6 +207,7 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		buf[0] = '\0';
 		break;
 	}
+	*jmp_addr = jmp;
 	return ret;
 }
 
@@ -273,13 +277,15 @@ static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_t
 
 	ret = decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
 			  as, asd,
-			  get_src(instr), op1, src_ext);
+			  get_src(instr), op1, src_ext,
+			  &cmd->jmp_addr);
 
 	char dstbuf[16] = {0};
 
 	ret += decode_addr(dstbuf, sizeof(dstbuf),
 			   ad, add,
-			   get_dst(instr), ret > 0 ? op2 : op1, dst_ext);
+			   get_dst(instr), ret > 0 ? op2 : op1, dst_ext,
+			   &cmd->jmp_addr);
 
 	if (cmd->operands[0] && dstbuf[0]) {
 		strncat(cmd->operands, ", ", MSP430_INSTR_MAXLEN - 1
@@ -303,7 +309,7 @@ static ut8 get_jmp_cond(ut16 instr)
 static ut8 output_jump(ut16 instr, ut16 ext, struct msp430_cmd *cmd)
 {
 	ut16 addr = instr & 0x3FF;
-	cmd->jmp_addr = addr >= 0x300 ? (st16)((0xFE00 | addr) * 2 + 2) : (addr & 0x1FF) * 2 + 2;
+	cmd->jmp_addr = (st16)(addr >= 0x300 ? (st16)((0xFE00 | addr) * 2 + 2) : (addr & 0x1FF) * 2 + 2);
 	snprintf(cmd->operands, MSP430_INSTR_MAXLEN - 1, "$%c0x%04x", addr >= 0x300 ? '-' : '+',
 		 addr >= 0x300 ? 0x400 - ((addr & 0x1FF) * 2 + 2) : (addr & 0x1FF) * 2 + 2);
 	cmd->jmp_cond = get_jmp_cond (instr);
@@ -318,7 +324,7 @@ static ut8 output_oneop(ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
 	ut8 reg = get_dst(instr);
 	ut8 mode = decode_addr_mode(as, reg);
 	return decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			   as, mode, reg, op1, get_dst(ext));
+			   as, mode, reg, op1, get_dst(ext), &cmd->jmp_addr);
 }
 
 static ut8 decode_430x(ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd)

@@ -100,6 +100,14 @@ int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
 	    }
 	}
 
+	if (strcmp("call", cmd.instr) == 0) {
+	    op->jump = cmd.jmp_addr;
+	    op->fail = addr + op->size;
+	    if (op->jump == 0) {
+		op->type = R_ANAL_OP_TYPE_UCALL;
+	    }
+	}
+
 	return ret;
 }
 

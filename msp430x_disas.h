@@ -119,7 +119,7 @@ enum msp430_registers {
 struct msp430_cmd {
 	ut8	type;
 	ut16	opcode;
-	st16	jmp_addr;
+	st32	jmp_addr;
 	ut16	call_addr;
 	ut8	jmp_cond;
 	char	instr[MSP430_INSTR_MAXLEN];
