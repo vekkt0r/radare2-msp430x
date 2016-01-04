@@ -7,7 +7,60 @@
 
 #include "msp430x_disas.h"
 
-static int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
+typedef struct {
+    char name[8];
+    _RAnalOpType type;
+} opcode_type_table;
+
+static const opcode_type_table opcodes[] = {
+    // One operand instructions
+    {"rra", R_ANAL_OP_TYPE_ROR},
+    {"rrc", R_ANAL_OP_TYPE_ROR},
+    {"push", R_ANAL_OP_TYPE_PUSH},
+    {"call", R_ANAL_OP_TYPE_CALL},
+    {"reti", R_ANAL_OP_TYPE_RET},
+
+    // Two operand instructions
+    {"mov",  R_ANAL_OP_TYPE_MOV},
+    {"add",  R_ANAL_OP_TYPE_ADD},
+    {"addc", R_ANAL_OP_TYPE_ADD},
+    {"subc", R_ANAL_OP_TYPE_SUB},
+    {"sub",  R_ANAL_OP_TYPE_SUB},
+    {"cmp",  R_ANAL_OP_TYPE_CMP},
+    {"dadd", R_ANAL_OP_TYPE_ADD},
+    {"bit",  R_ANAL_OP_TYPE_AND},
+    {"bic",  R_ANAL_OP_TYPE_MOV},
+    {"bis",  R_ANAL_OP_TYPE_MOV},
+    {"xor",  R_ANAL_OP_TYPE_XOR},
+    {"and",  R_ANAL_OP_TYPE_AND},
+
+    // Emulated instructions
+    {"nop",  R_ANAL_OP_TYPE_NOP},
+    {"ret",  R_ANAL_OP_TYPE_RET},
+    //{"br",   R_ANAL_OP_TYPE_},
+    {"clr",  R_ANAL_OP_TYPE_MOV},
+    {"clrc", R_ANAL_OP_TYPE_MOV},
+    {"clrn", R_ANAL_OP_TYPE_MOV},
+    {"clrz", R_ANAL_OP_TYPE_MOV},
+    {"dadc", R_ANAL_OP_TYPE_ADD},
+    {"dec",  R_ANAL_OP_TYPE_SUB},
+    {"decd", R_ANAL_OP_TYPE_SUB},
+    {"dint", R_ANAL_OP_TYPE_MOV},
+    {"eint", R_ANAL_OP_TYPE_MOV},
+    {"inc",  R_ANAL_OP_TYPE_ADD},
+    {"incd", R_ANAL_OP_TYPE_ADD},
+    {"pop",  R_ANAL_OP_TYPE_POP},
+    {"rla",  R_ANAL_OP_TYPE_SAL},
+    {"rlc",  R_ANAL_OP_TYPE_SAR},
+    {"sbc",  R_ANAL_OP_TYPE_SUB},
+    {"setc", R_ANAL_OP_TYPE_ADD},
+    {"setn", R_ANAL_OP_TYPE_ADD},
+    {"setz", R_ANAL_OP_TYPE_ADD},
+    {"tst",  R_ANAL_OP_TYPE_CMP},
+
+};
+
+int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
 		      const ut8 *buf, int len)
 {
 	int ret;
@@ -27,33 +80,6 @@ static int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
 	op->ptr = op->val = -1;
 
 	switch (cmd.type) {
-	case MSP430_ONEOP:
-		switch (cmd.opcode) {
-		case MSP430_RRA:
-		case MSP430_RCR:
-			op->type = R_ANAL_OP_TYPE_ROR; break;
-		case MSP430_PUSH:
-			op->type = R_ANAL_OP_TYPE_PUSH; break;
-		case MSP430_CALL:
-			op->type = R_ANAL_OP_TYPE_CALL; break;
-		case MSP430_RETI:
-			op->type = R_ANAL_OP_TYPE_RET; break;
-		}
-		break;
-	case MSP430_TWOOP:
-		case MSP430_BIT:
-		case MSP430_BIC:
-		case MSP430_BIS:
-		case MSP430_MOV: op->type = R_ANAL_OP_TYPE_MOV; break;
-		case MSP430_DADD:
-		case MSP430_ADDC:
-		case MSP430_ADD: op->type = R_ANAL_OP_TYPE_ADD; break;
-		case MSP430_SUBC:
-		case MSP430_SUB: op->type = R_ANAL_OP_TYPE_SUB; break;
-		case MSP430_CMP: op->type = R_ANAL_OP_TYPE_CMP; break;
-		case MSP430_XOR: op->type = R_ANAL_OP_TYPE_XOR; break;
-		case MSP430_AND: op->type = R_ANAL_OP_TYPE_AND; break;
-		break;
 	case MSP430_JUMP:
 		if (cmd.jmp_cond == MSP430_JMP) {
 			op->type = R_ANAL_OP_TYPE_JMP;
@@ -65,6 +91,13 @@ static int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
 		break;
 	default:
 		op->type = R_ANAL_OP_TYPE_UNK;
+	}
+
+	for (int i = 0; i < sizeof(opcodes)/sizeof(&opcodes[0]); i++) {
+	    if (strncmp(cmd.instr, opcodes[i].name, 8) == 0) {
+		op->type = opcodes[i].type;
+		break;
+	    }
 	}
 
 	return ret;
