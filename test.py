@@ -3,7 +3,7 @@ import subprocess
 
 class TestDisas(unittest.TestCase):
     def dis(self, ops):
-        return subprocess.check_output('rasm2 -a msp430xx -d %s' % ops,
+        return subprocess.check_output('LIBR_PLUGINS=. rasm2 -a msp430xx -d %s' % (ops),
                                        shell=True).rstrip()
 
     def test_mov(self):
