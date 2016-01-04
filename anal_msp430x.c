@@ -107,6 +107,9 @@ int msp430x_op(RAnal *anal, RAnalOp *op, ut64 addr,
 		op->type = R_ANAL_OP_TYPE_UCALL;
 	    }
 	}
+	else if (strcmp("mov", cmd.instr) == 0) {
+	    op->ptr = cmd.ptr_addr;
+	}
 
 	return ret;
 }

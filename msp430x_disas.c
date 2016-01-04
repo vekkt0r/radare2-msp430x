@@ -143,11 +143,11 @@ static ut8 is_extension_word(ut16 instr)
 	return ((instr >> 11) & 0x1f) == 3;
 }
 
-static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *jmp_addr)
+static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *addr)
 {
 	char postfix = 0;
 	int ret = 0;
-	st32 jmp = 0;
+	st32 address = 0;
 	switch (mode) {
 	case MSP430_ADDR_DIRECT:
 		snprintf (buf, max, "r%d", reg);
@@ -166,8 +166,8 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		snprintf (buf, max, "@r%d%c", reg, postfix);
 		break;
 	case MSP430_ADDR_IMM:
-		jmp = ext << 16 | op;
-		snprintf (buf, max, "#0x%04x", jmp);
+		address = ext << 16 | op;
+		snprintf (buf, max, "#0x%04x", address);
 		ret = 2;
 		break;
 	case MSP430_ADDR_REPEAT:
@@ -184,8 +184,8 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		ret = 2;
 		break;
 	case MSP430_ADDR_IMM20:
-		jmp = (reg << 16) | op;
-		snprintf (buf, max, "#0x%04x", jmp);
+		address = (reg << 16) | op;
+		snprintf (buf, max, "#0x%04x", address);
 		ret = 2;
 		break;
 	case MSP430_ADDR_ABS20:
@@ -207,7 +207,7 @@ static ut8 decode_addr(char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut1
 		buf[0] = '\0';
 		break;
 	}
-	*jmp_addr = jmp;
+	*addr = address;
 	return ret;
 }
 
@@ -275,17 +275,26 @@ static ut8 output_twoop(ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_t
 	} else
 		add = op-> ad;
 
+	st32 data_ptr;
 	ret = decode_addr(cmd->operands, MSP430_INSTR_MAXLEN - 1,
 			  as, asd,
 			  get_src(instr), op1, src_ext,
-			  &cmd->jmp_addr);
+			  &data_ptr);
 
 	char dstbuf[16] = {0};
+
+	if (data_ptr != 0) {
+		cmd->ptr_addr = data_ptr;
+	}
 
 	ret += decode_addr(dstbuf, sizeof(dstbuf),
 			   ad, add,
 			   get_dst(instr), ret > 0 ? op2 : op1, dst_ext,
-			   &cmd->jmp_addr);
+			   &data_ptr);
+
+	if (data_ptr != 0) {
+		cmd->ptr_addr = data_ptr;
+	}
 
 	if (cmd->operands[0] && dstbuf[0]) {
 		strncat(cmd->operands, ", ", MSP430_INSTR_MAXLEN - 1

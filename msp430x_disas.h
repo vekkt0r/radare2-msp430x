@@ -121,6 +121,7 @@ struct msp430_cmd {
 	ut16	opcode;
 	st32	jmp_addr;
 	ut16	call_addr;
+	ut32    ptr_addr;
 	ut8	jmp_cond;
 	char	instr[MSP430_INSTR_MAXLEN];
 	char	operands[MSP430_INSTR_MAXLEN];
