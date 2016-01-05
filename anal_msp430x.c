@@ -81,7 +81,7 @@ int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 
 	switch (cmd.type) {
 	case MSP430_JUMP:
-		if (cmd.jmp_cond == MSP430_JMP) {
+		if (strcmp("jmp", cmd.instr) == 0) {
 			op->type = R_ANAL_OP_TYPE_JMP;
 		} else {
 			op->type = R_ANAL_OP_TYPE_CJMP;
