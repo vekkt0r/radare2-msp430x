@@ -1,7 +1,7 @@
 #ifndef MSP430X_DISAS_H
 #define MSP430X_DISAS_H
 
-#define MSP430_INSTR_MAXLEN	32
+#define MSP430_INSTR_MAXLEN 32
 
 enum msp430_addressing {
 	MSP430_ADDR_DIRECT,
@@ -55,7 +55,7 @@ enum msp430_jumps {
 enum msp430_twoop_opcodes {
 	MSP430_X,
 	MSP430_JMP_OPC = 0x01,
-	MSP430_MOV	= 0x4,
+	MSP430_MOV = 0x4,
 	MSP430_ADD,
 	MSP430_ADDC,
 	MSP430_SUBC,
@@ -117,16 +117,16 @@ enum msp430_registers {
 };
 
 struct msp430_cmd {
-	ut8	type;
-	ut16	opcode;
-	st32	jmp_addr;
-	ut16	call_addr;
-	ut32    ptr_addr;
-	ut8	jmp_cond;
-	char	instr[MSP430_INSTR_MAXLEN];
-	char	operands[MSP430_INSTR_MAXLEN];
-	char	prefix[MSP430_INSTR_MAXLEN];
+	ut8 type;
+	ut16 opcode;
+	st32 jmp_addr;
+	ut16 call_addr;
+	ut32 ptr_addr;
+	ut8 jmp_cond;
+	char instr[MSP430_INSTR_MAXLEN];
+	char operands[MSP430_INSTR_MAXLEN];
+	char prefix[MSP430_INSTR_MAXLEN];
 };
 
-int msp430x_decode_command(const ut8 *instr, struct msp430_cmd *cmd);
+int msp430x_decode_command (const ut8 *instr, struct msp430_cmd *cmd);
 #endif /* MSP430X_DISAS_H */
