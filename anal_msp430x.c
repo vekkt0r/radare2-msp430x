@@ -18,6 +18,7 @@ static const opcode_type_table opcodes[] = {
 	{"rrc", R_ANAL_OP_TYPE_ROR},
 	{"push", R_ANAL_OP_TYPE_PUSH},
 	{"call", R_ANAL_OP_TYPE_CALL},
+	{"calla", R_ANAL_OP_TYPE_CALL},
 	{"reti", R_ANAL_OP_TYPE_RET},
 
 	// Two operand instructions
@@ -101,6 +102,12 @@ int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 
 	if (strcmp ("call", cmd.instr) == 0) {
 		op->jump = cmd.jmp_addr;
+		op->fail = addr + op->size;
+		if (op->jump == 0) {
+			op->type = R_ANAL_OP_TYPE_UCALL;
+		}
+	} else if (strcmp ("calla", cmd.instr) == 0) {
+		op->jump = cmd.ptr_addr;
 		op->fail = addr + op->size;
 		if (op->jump == 0) {
 			op->type = R_ANAL_OP_TYPE_UCALL;
