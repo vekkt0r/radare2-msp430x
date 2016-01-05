@@ -345,20 +345,36 @@ static ut8 output_oneop(ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
 static ut8 decode_430x(ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd)
 {
 	for (const opcode_table *ot = opcodes; ot->name[0] != '\0'; ot++) {
+		ut8 len = 0;
 		if ((instr & ot->mask) == ot->id) {
 			snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
 				  ot->name, ext ? 'x' : '\0');
 
 			switch (ot->ad) {
 			case MSP430_ADDR_JUMP:
-				return 2 + output_jump(instr, ext, cmd);
+				len = 2 + output_jump(instr, ext, cmd);
+				break;
 
 			case MSP430_ADDR_ONEOP:
-				return 2 + output_oneop(instr, ext, op1, cmd);
+				len = 2 + output_oneop(instr, ext, op1, cmd);
+				break;
 
 			default:
-				return 2 + output_twoop(instr, ext, op1, op2, ot, cmd);
+				len = 2 + output_twoop(instr, ext, op1, op2, ot, cmd);
+				break;
 			}
+			// Check if we have a repeat count
+			// TODO: Refactor into func
+			// TODO: only for single ops?
+			if (len == 2 && ((ext & 0xf) != 0)) {
+			    if (ext & 0x80) {
+						snprintf(cmd->prefix, MSP430_INSTR_MAXLEN, ".rpt r%d", ext & 0x0f);
+			    } else {
+						snprintf(cmd->prefix, MSP430_INSTR_MAXLEN, ".rpt #%d", 1 + (ext & 0x0f));
+			    }
+			    break;
+			}
+			return len;
 		}
 	}
 	return -1;

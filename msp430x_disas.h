@@ -125,6 +125,7 @@ struct msp430_cmd {
 	ut8	jmp_cond;
 	char	instr[MSP430_INSTR_MAXLEN];
 	char	operands[MSP430_INSTR_MAXLEN];
+	char	prefix[MSP430_INSTR_MAXLEN];
 };
 
 int msp430x_decode_command(const ut8 *instr, struct msp430_cmd *cmd);

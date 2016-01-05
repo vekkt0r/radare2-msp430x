@@ -9,16 +9,19 @@
 static int disassemble(RAsm *a, RAsmOp *op, const ut8 *buf, int len)
 {
 	int ret;
-	struct msp430_cmd cmd;
+	struct msp430_cmd cmd = {0};
 
 	ret = msp430x_decode_command (buf, &cmd);
 
 	if (ret > 0) {
-		if (cmd.operands[0]) {
-			snprintf (op->buf_asm, R_ASM_BUFSIZE, "%s %s", cmd.instr, cmd.operands);
-		} else {
-			snprintf (op->buf_asm, R_ASM_BUFSIZE, "%s", cmd.instr);
-		}
+	    if (cmd.prefix[0]) {
+		snprintf (op->buf_asm, R_ASM_BUFSIZE, "%s %s %s", cmd.prefix, cmd.instr, cmd.operands);
+	    }
+	    else if (cmd.operands[0]) {
+		snprintf (op->buf_asm, R_ASM_BUFSIZE, "%s %s", cmd.instr, cmd.operands);
+	    } else {
+		snprintf (op->buf_asm, R_ASM_BUFSIZE, "%s", cmd.instr);
+	    }
 	}
 
 	op->size = ret;
