@@ -24,77 +24,11 @@ enum msp430_addressing {
 	MSP430_ADDR_NONE,
 };
 
-enum msp430_oneop_opcodes {
-	MSP430_RCR,
-	MSP430_SWPB,
-	MSP430_RRA,
-	MSP430_SXT,
-	MSP430_PUSH,
-	MSP430_CALL,
-	MSP430_RETI,
-	MSP430_UNUSED,
-};
-
-enum msp430_oneop_opcodes_x {
-	MSP430_CALLA = 0x1,
-	MSP430_PUSHM,
-	MSP430_POPM,
-};
-
-enum msp430_jumps {
-	MSP430_JNE,
-	MSP430_JEQ,
-	MSP430_JNC,
-	MSP430_JC,
-	MSP430_JN,
-	MSP430_JGE,
-	MSP430_JL,
-	MSP430_JMP,
-};
-
-enum msp430_twoop_opcodes {
-	MSP430_X,
-	MSP430_JMP_OPC = 0x01,
-	MSP430_MOV = 0x4,
-	MSP430_ADD,
-	MSP430_ADDC,
-	MSP430_SUBC,
-	MSP430_SUB,
-	MSP430_CMP,
-	MSP430_DADD,
-	MSP430_BIT,
-	MSP430_BIC,
-	MSP430_BIS,
-	MSP430_XOR,
-	MSP430_AND,
-};
-
-enum msp430_oneop_r_opcodes_x {
-	MSP430_RRCM,
-	MSP430_RRAM,
-	MSP430_RLAM,
-	MSP430_RRUM,
-};
-
-enum msp430_twoop_opcodes_x {
-	MSP430_MOVA,
-	MSP430_CMPA,
-	MSP430_ADDA,
-	MSP430_SUBA,
-};
-
-enum msp430_addr_modes {
-	MSP430_DIRECT,
-	MSP430_INDEXED,
-	MSP430_INDIRECT,
-	MSP430_INDIRECT_INC,
-};
-
 enum msp430_cmd_type {
 	MSP430_ONEOP,
 	MSP430_TWOOP,
 	MSP430_JUMP,
-	MPS430_X,
+	MSP430_X,
 };
 
 enum msp430_registers {

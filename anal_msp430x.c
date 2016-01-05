@@ -61,8 +61,8 @@ static const opcode_type_table opcodes[] = {
 
 };
 
-int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
-		const ut8 *buf, int len) {
+static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
+		       const ut8 *buf, int len) {
 	int ret;
 	struct msp430_cmd cmd;
 
