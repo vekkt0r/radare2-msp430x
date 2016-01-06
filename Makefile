@@ -7,11 +7,17 @@ OBJS_ANAL=anal_$(NAME).o $(NAME)_disas.o
 SO_EXT=$(shell uname|grep -q Darwin && echo dylib || echo so)
 LIB_ASM=asm_$(NAME).$(SO_EXT)
 LIB_ANAL=anal_$(NAME).$(SO_EXT)
+DEPS= $(OBJS_ASM:.o=.d) $(OBJS_ANAL:.o=.d)
 
 all: $(LIB_ASM) $(LIB_ANAL)
 
 clean:
-	rm -f $(LIB_ASM) $(LIB_ANAL) $(OBJS_ASM) $(OBJS_ANAL)
+	rm -f $(LIB_ASM) $(LIB_ANAL) $(OBJS_ASM) $(OBJS_ANAL) $(DEPS)
+
+-include $(DEPS)
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) -MMD -o $@ $<
 
 $(LIB_ASM): $(OBJS_ASM)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(LIB_ASM)
@@ -26,20 +32,3 @@ install:
 uninstall:
 	rm -f $(R2_PLUGIN_PATH)/$(LIB_ANAL)
 	rm -f $(R2_PLUGIN_PATH)/$(LIB_ASM)
-# DO NOT DELETE
-
-anal_msp430x.o: /usr/include/string.h /usr/include/_types.h
-anal_msp430x.o: /usr/include/sys/_types.h /usr/include/sys/cdefs.h
-anal_msp430x.o: /usr/include/sys/_symbol_aliasing.h
-anal_msp430x.o: /usr/include/sys/_posix_availability.h
-anal_msp430x.o: /usr/include/machine/_types.h /usr/include/i386/_types.h
-anal_msp430x.o: /usr/include/sys/_pthread/_pthread_types.h
-anal_msp430x.o: /usr/include/Availability.h
-anal_msp430x.o: /usr/include/AvailabilityInternal.h
-anal_msp430x.o: /usr/include/sys/_types/_size_t.h
-anal_msp430x.o: /usr/include/sys/_types/_null.h
-anal_msp430x.o: /usr/include/sys/_types/_rsize_t.h
-anal_msp430x.o: /usr/include/sys/_types/_errno_t.h
-anal_msp430x.o: /usr/include/sys/_types/_ssize_t.h /usr/include/strings.h
-anal_msp430x.o: /usr/include/secure/_string.h /usr/include/secure/_common.h
-anal_msp430x.o: msp430x_disas.h
