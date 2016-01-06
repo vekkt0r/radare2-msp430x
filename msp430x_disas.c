@@ -132,7 +132,6 @@ static ut8 get_as (ut16 instr) {
 	return (instr >> 4) & 3;
 }
 
-// TODO: Unused
 static ut8 get_bw (ut16 instr) {
 	return (instr >> 6) & 1;
 }
@@ -144,7 +143,7 @@ static ut8 get_ad (ut16 instr) {
 static ut8 is_extension_word (ut16 instr) {
 	return ((instr >> 11) & 0x1f) == 3;
 }
-
+// TODO: Who names a parameter konst?
 static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *addr) {
 	char postfix = 0;
 	int ret = 0;
@@ -155,9 +154,8 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 		ret = 0;
 		break;
 	case MSP430_ADDR_INDEXED:
-		// TODO: Probably broken sign
+		// Do not print out sign, just raw hex
 		snprintf (buf, max, "0x%04x(r%d)", (ext << 16) | op, reg);
-		//"%c0x%04x(r%d)", (op ^ 0xffff) > 0 ? '+' : '-', op, reg);
 		ret = 2;
 		break;
 	case MSP430_ADDR_INDIRECT_POST_INC:
@@ -180,10 +178,6 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 	case MSP430_ADDR_POPM:
 		snprintf (buf, max, "r%d", op);
 		break;
-	case MSP430_ADDR_REL:
-		snprintf (buf, max, "0x%04x(r%d)", (ext << 16) | op, reg);
-		ret = 2;
-		break;
 	case MSP430_ADDR_IMM20:
 		address = (reg << 16) | op;
 		snprintf (buf, max, "#0x%05x", address);
@@ -201,8 +195,7 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 		snprintf (buf, max, "#%d", 4 * (konst - 1));
 		break;
 	case MSP430_ADDR_CG2:
-		// TODO: FFh should be same size as instruction (ff, ffff, ffffff)
-		snprintf (buf, max, "#%d", konst == 3 ? 0xff : konst);
+		snprintf (buf, max, "#%d", konst == 3 ? -1 : konst);
 		break;
 	default:
 		buf[0] = '\0';
@@ -215,20 +208,16 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 static ut8 decode_addr_mode (ut8 mode, ut8 dst) {
 	ut8 dec;
 	if (mode > 1 && dst == MSP430_SR)
-		dec = MSP430_ADDR_CG1;
+		return MSP430_ADDR_CG1;
 	else if (dst == MSP430_R3)
-		dec = MSP430_ADDR_CG2;
+		return MSP430_ADDR_CG2;
 	else if (mode && dst == MSP430_SR)
-		dec = MSP430_ADDR_ABS;
-	else if (mode == MSP430_ADDR_INDIRECT_POST_INC && dst == MSP430_PC)
-		dec = MSP430_ADDR_IMM;
-	// TODO: Find another way to do this
-	else if (mode != MSP430_ADDR_REPEAT && mode != MSP430_ADDR_ABS20 && dst == MSP430_PC)
-		dec = MSP430_ADDR_REL;
+		return MSP430_ADDR_ABS;
+	else if (mode == MSP430_ADDR_INDIRECT_POST_INC
+		 && dst == MSP430_PC)
+		return MSP430_ADDR_IMM;
 	else
-		dec = mode;
-
-	return dec;
+		return mode;
 }
 
 static ut8 output_twoop (ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
