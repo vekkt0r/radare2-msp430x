@@ -1,0 +1,29 @@
+* Radare MSP430x architecture support
+
+Plugin for supporting MSP430X architecture in Radare2. Support for
+disassembling and basic analyzer.
+
+Not tested thoroughly (or much at all) but "seems to work" for some
+random files checked and the tests in ~test.py~. Analyzer support is
+still in progess but works for the most basic stuffs.
+
+Differences against the Radare2 included msp430 architecture:
+- Supports MSP430X instructions.
+- Data and code xrefs for ~mov~, ~call~ and ~calla~.
+
+** Pre-requisites
+
+- Radare2 needs to be installed and available in PATH.
+- pkg-config files needs to be available for ~r_asm~ and ~r_anal~.
+
+** Usage
+
+Make sure the built shared libraries are avilable at ~LIBR_PLUGINS~
+path and set architecture to msp430x ~r2 -a msp430x <file>~.
+
+** Known issues and defects
+
+- Register relative offsets does not include any sign, will be printed
+  in raw hex. (i.e. ~mov 0xa358(r0)~ instead of ~mov -0x5ca8(r0)~).
+- Not all instructions classified with type and xrefs by analyzer.
+- PC relative addressing is not saved as xrefs.
