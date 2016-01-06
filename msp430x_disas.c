@@ -78,10 +78,10 @@ static const opcode_table opcodes[] = {
 	{"calla", 0x1340, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_DIRECT, MSP430_X},
 	{"calla", 0x1350, 0xfff0, MSP430_ADDR_NONE, MSP430_ADDR_INDEXED, MSP430_X},
 
-	{"pushm.a", 0x1400, 0xff00, MSP430_ADDR_PP, MSP430_ADDR_DIRECT, MSP430_X},
-	{"pushm", 0x1500, 0xff00, MSP430_ADDR_PP, MSP430_ADDR_DIRECT, MSP430_X},
-	{"popm.a", 0x1600, 0xff00, MSP430_ADDR_PP, MSP430_ADDR_POPM, MSP430_X},
-	{"popm", 0x1700, 0xff00, MSP430_ADDR_PP, MSP430_ADDR_POPM, MSP430_X},
+	{"pushm.a", 0x1400, 0xff00, MSP430_ADDR_PUSHPOP, MSP430_ADDR_DIRECT, MSP430_X},
+	{"pushm", 0x1500, 0xff00, MSP430_ADDR_PUSHPOP, MSP430_ADDR_DIRECT, MSP430_X},
+	{"popm.a", 0x1600, 0xff00, MSP430_ADDR_PUSHPOP, MSP430_ADDR_POPM, MSP430_X},
+	{"popm", 0x1700, 0xff00, MSP430_ADDR_PUSHPOP, MSP430_ADDR_POPM, MSP430_X},
 
 	// Two operand instructions
 	{"mov", 0x4000, 0xf000, MSP430_ADDR_AUTO, MSP430_ADDR_AUTO, MSP430_TWOOP},
@@ -143,8 +143,8 @@ static ut8 get_ad (ut16 instr) {
 static ut8 is_extension_word (ut16 instr) {
 	return ((instr >> 11) & 0x1f) == 3;
 }
-// TODO: Who names a parameter konst?
-static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *addr) {
+
+static ut8 decode_addr (char *buf, ssize_t max, ut8 as, ut8 mode, ut8 reg, ut16 op, ut16 ext, st32 *addr) {
 	char postfix = 0;
 	int ret = 0;
 	st32 address = 0;
@@ -172,7 +172,7 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 	case MSP430_ADDR_REPEAT:
 		snprintf (buf, max, "#%d", ((reg >> 2) & 0xf) + 1);
 		break;
-	case MSP430_ADDR_PP:
+	case MSP430_ADDR_PUSHPOP:
 		snprintf (buf, max, "#%d", op);
 		break;
 	case MSP430_ADDR_POPM:
@@ -192,10 +192,10 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 konst, ut8 mode, ut8 reg, ut
 		ret = 2;
 		break;
 	case MSP430_ADDR_CG1:
-		snprintf (buf, max, "#%d", 4 * (konst - 1));
+		snprintf (buf, max, "#%d", 4 * (as - 1));
 		break;
 	case MSP430_ADDR_CG2:
-		snprintf (buf, max, "#%d", konst == 3 ? -1 : konst);
+		snprintf (buf, max, "#%d", as == 3 ? -1 : as);
 		break;
 	default:
 		buf[0] = '\0';
@@ -220,13 +220,19 @@ static ut8 decode_addr_mode (ut8 mode, ut8 dst) {
 		return mode;
 }
 
-static ut8 output_twoop (ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_table *op, struct msp430_cmd *cmd) {
+static ut8 output_twoop (ut16 instr,
+			 ut16 ext,
+			 ut16 op1,
+			 ut16 op2,
+			 const opcode_table *op,
+			 struct msp430_cmd *cmd) {
 	int ret;
-	ut8 as, asd;
-	ut8 ad, add;
+	ut8 as, src_mode;
+	ut8 ad, dst_mode;
 	ut8 src_ext = 0;
 	ut8 dst_ext = 0;
 	char postfix = 0;
+	st32 data_ptr;
 
 	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%s%s",
 		  op->name, ext ? "x" : "",
@@ -239,33 +245,32 @@ static ut8 output_twoop (ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_
 		as = op->as;
 	}
 
-	// TODO: One more hack..
-	if (as == MSP430_ADDR_PP) {
-		asd = as;
+	// Push/pop have their very own encoding of as / op
+	if (as == MSP430_ADDR_PUSHPOP) {
+		src_mode = as;
 		op1 = ((instr >> 4) & 0xf) + 1;
 	} else if (as != MSP430_ADDR_NONE) {
-		asd = decode_addr_mode (as, get_src (instr));
+		src_mode = decode_addr_mode (as, get_src (instr));
 	} else {
-		asd = as;
+		src_mode = as;
 	}
 
 	if (op->ad == MSP430_ADDR_AUTO) {
 		ad = get_ad (instr);
 
 		if (ad && get_dst (instr) == MSP430_SR)
-			add = MSP430_ADDR_ABS;
+			dst_mode = MSP430_ADDR_ABS;
 		else
-			add = ad;
+			dst_mode = ad;
 		dst_ext = get_dst (ext);
 	} else if (op->ad == MSP430_ADDR_POPM) {
-		add = MSP430_ADDR_POPM;
+		dst_mode = MSP430_ADDR_POPM;
 		op1 = get_dst (instr) + (instr >> 4) & 0xf;
 	} else
-		add = op->ad;
+		dst_mode = op->ad;
 
-	st32 data_ptr;
 	ret = decode_addr (cmd->operands, MSP430_INSTR_MAXLEN - 1,
-			   as, asd,
+			   as, src_mode,
 			   get_src (instr), op1, src_ext,
 			   &data_ptr);
 
@@ -276,7 +281,7 @@ static ut8 output_twoop (ut16 instr, ut16 ext, ut16 op1, ut16 op2, const opcode_
 	}
 
 	ret += decode_addr (dstbuf, sizeof(dstbuf),
-			    ad, add,
+			    ad, dst_mode,
 			    get_dst (instr), ret > 0 ? op2 : op1, dst_ext,
 			    &data_ptr);
 
