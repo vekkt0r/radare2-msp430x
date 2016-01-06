@@ -30,7 +30,7 @@ static int disassemble (RAsm *a, RAsmOp *op, const ut8 *buf, int len) {
 }
 
 RAsmPlugin r_asm_plugin_msp430x = {
-	.name = "msp430xx",
+	.name = "msp430x",
 	.license = "LGPL3",
 	.desc = "msp430x disassembly plugin",
 	.arch = "msp430x",

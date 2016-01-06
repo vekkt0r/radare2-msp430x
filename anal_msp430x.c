@@ -125,7 +125,7 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 }
 
 RAnalPlugin r_anal_plugin_msp430x = {
-	.name = "msp430xx",
+	.name = "msp430x",
 	.desc = "TI MSP430X code analysis plugin",
 	.license = "LGPL3",
 	.arch = "msp430x",
