@@ -323,6 +323,17 @@ static ut8 output_oneop (ut16 instr, ut16 ext, ut16 op1, struct msp430_cmd *cmd)
 			    as, mode, reg, op1, get_dst (ext), &cmd->jmp_addr);
 }
 
+static void output_prefix(ut8 len, ut16 ext, char *prefix) {
+	// Check if we have a repeat count
+	if (len == 2 && ((ext & 0xf) != 0)) {
+		if (ext & 0x80) {
+			snprintf (prefix, MSP430_INSTR_MAXLEN, ".rpt r%d", ext & 0x0f);
+		} else {
+			snprintf (prefix, MSP430_INSTR_MAXLEN, ".rpt #%d", 1 + (ext & 0x0f));
+		}
+	}
+}
+
 static ut8 decode_430x (ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd) {
 	for (const opcode_table *ot = opcodes; ot->name[0] != '\0'; ot++) {
 		ut8 len = 0;
@@ -343,17 +354,7 @@ static ut8 decode_430x (ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_
 				len = 2 + output_twoop (instr, ext, op1, op2, ot, cmd);
 				break;
 			}
-			// Check if we have a repeat count
-			// TODO: Refactor into func
-			// TODO: only for single ops?
-			if (len == 2 && ((ext & 0xf) != 0)) {
-				if (ext & 0x80) {
-					snprintf (cmd->prefix, MSP430_INSTR_MAXLEN, ".rpt r%d", ext & 0x0f);
-				} else {
-					snprintf (cmd->prefix, MSP430_INSTR_MAXLEN, ".rpt #%d", 1 + (ext & 0x0f));
-				}
-				break;
-			}
+			output_prefix(len, ext, cmd->prefix);
 			return len;
 		}
 	}
