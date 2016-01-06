@@ -12,6 +12,7 @@ typedef struct {
 	_RAnalOpType type;
 } opcode_type_table;
 
+// TODO: Merge with table from msp430x_disassemble.c and move to separate file
 static const opcode_type_table opcodes[] = {
 	// One operand instructions
 	{"rra", R_ANAL_OP_TYPE_ROR},
@@ -78,6 +79,10 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 	op->addr = addr;
 	op->jump = op->fail = UT64_MAX;
 	op->ptr = op->val = -1;
+
+	// TODO: Re-write this completely, just a quick-n-dirty way of
+	// getting somewhat working analysis with xrefs for the most
+	// obvious stuff in r2. Probably a lot of things missing
 
 	switch (cmd.type) {
 	case MSP430_JUMP:
