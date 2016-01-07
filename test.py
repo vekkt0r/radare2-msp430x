@@ -1,5 +1,6 @@
 import unittest
 import subprocess
+from anal_wrapper import Anal, RAnalOp, RAnalOpType
 
 class TestDisas(unittest.TestCase):
     def dis(self, ops):
@@ -182,6 +183,11 @@ class TestDisas(unittest.TestCase):
             '3117': 'popm #4, r4',
         }
         self.helper_test_set(ops)
+
+class TestAnal(unittest.TestCase):
+    def test_mov(self):
+        a = Anal()
+        self.assertEqual(a.analyze('294a'), RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV))
 
 if __name__ == '__main__':
     unittest.main()
