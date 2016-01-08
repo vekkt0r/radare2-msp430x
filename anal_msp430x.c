@@ -98,7 +98,7 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 		op->type = R_ANAL_OP_TYPE_UNK;
 	}
 
-	for (int i = 0; i < sizeof(opcodes) / sizeof(&opcodes[0]); i++) {
+	for (size_t i = 0; i < sizeof(opcodes) / sizeof(&opcodes[0]); i++) {
 		if (strncmp (cmd.instr, opcodes[i].name, 8) == 0) {
 			op->type = opcodes[i].type;
 			break;

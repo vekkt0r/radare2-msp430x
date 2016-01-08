@@ -4,7 +4,7 @@ from anal_wrapper import Anal, RAnalOp, RAnalOpType
 
 class TestDisas(unittest.TestCase):
     def dis(self, ops):
-        return subprocess.check_output('LIBR_PLUGINS=. rasm2 -a msp430xx -d %s' % (ops),
+        return subprocess.check_output('LIBR_PLUGINS=. rasm2 -a msp430x -d %s' % (ops),
                                        shell=True).rstrip()
 
     def test_mov(self):
