@@ -333,7 +333,8 @@ static void output_prefix(ut8 len, ut16 ext, char *prefix) {
 }
 
 static ut8 decode_430x (ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd) {
-	for (const opcode_table *ot = opcodes; ot->name[0] != '\0'; ot++) {
+	const opcode_table *ot = opcodes;
+	for (; ot->name[0] != '\0'; ot++) {
 		ut8 len = 0;
 		if ((instr & ot->mask) == ot->id) {
 			snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",

@@ -66,6 +66,7 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 		       const ut8 *buf, int len) {
 	int ret;
 	struct msp430_cmd cmd;
+	size_t i;
 
 	memset (&cmd, 0, sizeof(cmd));
 	memset (op, 0, sizeof(RAnalOp));
@@ -98,7 +99,7 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 		op->type = R_ANAL_OP_TYPE_UNK;
 	}
 
-	for (size_t i = 0; i < sizeof(opcodes) / sizeof(&opcodes[0]); i++) {
+	for (i = 0; i < sizeof(opcodes) / sizeof(&opcodes[0]); i++) {
 		if (strncmp (cmd.instr, opcodes[i].name, 8) == 0) {
 			op->type = opcodes[i].type;
 			break;
