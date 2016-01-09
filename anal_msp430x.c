@@ -60,6 +60,9 @@ static const opcode_type_table opcodes[] = {
 	{"setz", R_ANAL_OP_TYPE_ADD},
 	{"tst", R_ANAL_OP_TYPE_CMP},
 
+	// Extended
+	{"mova", R_ANAL_OP_TYPE_MOV}
+
 };
 
 static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
@@ -118,7 +121,13 @@ static int msp430x_op (RAnal *anal, RAnalOp *op, ut64 addr,
 		if (op->jump == 0) {
 			op->type = R_ANAL_OP_TYPE_UCALL;
 		}
-	} else if (strcmp ("mov", cmd.instr) == 0) {
+	} else if (strcmp ("mov", cmd.instr) == 0 && cmd.ptr_addr != 0) {
+		// TODO: fix hack above, think about this case when
+		// refactoring to shared table
+		op->ptr = cmd.ptr_addr;
+	} else if (strcmp ("mova", cmd.instr) == 0 && cmd.ptr_addr != 0) {
+		// TODO: fix hack above, think about this case when
+		// refactoring to shared table
 		op->ptr = cmd.ptr_addr;
 	}
 

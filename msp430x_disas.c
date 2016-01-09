@@ -184,11 +184,13 @@ static ut8 decode_addr (char *buf, ssize_t max, ut8 as, ut8 mode, ut8 reg, ut16 
 		ret = 2;
 		break;
 	case MSP430_ADDR_ABS20:
-		snprintf (buf, max, "&0x%04x", (reg << 16) | op);
+		address = (reg << 16) | op;
+		snprintf (buf, max, "&0x%04x", address);
 		ret = 2;
 		break;
 	case MSP430_ADDR_ABS:
-		snprintf (buf, max, "&0x%04x", (ext << 16) | op);
+		address = (ext << 16) | op;
+		snprintf (buf, max, "&0x%04x", address);
 		ret = 2;
 		break;
 	case MSP430_ADDR_CG1:

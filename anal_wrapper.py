@@ -3,16 +3,20 @@ from ctypes import cdll, Structure, c_int, c_double, c_uint, c_byte, c_char_p, c
 class RAnalOpType(object):
     R_ANAL_OP_TYPE_CALL=3
     R_ANAL_OP_TYPE_MOV=9
+    UNKNOWN=-1
 
 class RAnalOp(object):
-    def __init__(self, type_):
+    def __init__(self, type_=RAnalOpType.UNKNOWN,
+                 ptr=-1,
+                 jump=c_uint64(-1).value):
         self._type = type_
+        self._ptr = ptr
+        self._jump = jump
 
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __eq__(self, other):
-        return self._type == other._type
+    def from_op(self, op):
+        self._type = op.type
+        self._ptr = op.ptr
+        self._jump = op.jump
 
 class _RAnalOp(Structure):
     _fields_ = [('mnemonic', c_char_p),
@@ -31,7 +35,6 @@ class _RAnalOp(Structure):
                 ('eob', c_int),
                 ('delay', c_int),
                 ('jump', c_uint64),
-                ('jmp', c_uint64),
                 ('fail', c_uint64),
                 ('selector', c_uint32),
                 ('ptr', c_int64),
@@ -70,18 +73,20 @@ class Anal(object):
         self.lib = cdll.LoadLibrary('./anal_msp430x.dylib')
         self.plugin = RAnalPlugin.in_dll(self.lib, 'r_anal_plugin_msp430x')
 
-    def analyze(self, data):
+    def analyze(self, data, address = 0):
         expected_length = len(data) / 2
 
         op = _RAnalOp()
         actual_length = self.plugin.op(None,
                                        op,
-                                       0,
+                                       address,
                                        data.decode('hex'),
                                        expected_length)
 
         if expected_length == actual_length:
-            return RAnalOp(op.type)
+            r = RAnalOp()
+            r.from_op(op)
+            return r
         else:
             print 'expected length %d, got length %d' \
                 % (expected_length, actual_length)
