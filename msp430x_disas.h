@@ -3,6 +3,8 @@
 
 #define MSP430_INSTR_MAXLEN 32
 
+#include "opcodes.h"
+
 enum msp430_addressing {
 	MSP430_ADDR_DIRECT,
 	MSP430_ADDR_INDEXED,
@@ -59,6 +61,7 @@ struct msp430_cmd {
 	char instr[MSP430_INSTR_MAXLEN];
 	char operands[MSP430_INSTR_MAXLEN];
 	char prefix[MSP430_INSTR_MAXLEN];
+	const opcode_table *op;
 };
 
 int msp430x_decode_command (const ut8 *instr, struct msp430_cmd *cmd);

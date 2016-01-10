@@ -2,7 +2,6 @@
 #include <r_util.h>
 
 #include "msp430x_disas.h"
-#include "opcodes.h"
 
 /* Known "issues":
    - mov #0, offset(reg) is shown as clr offset(reg) instead of mov
@@ -123,7 +122,8 @@ static ut8 output_twoop (ut16 instr,
 	st32 data_ptr;
 
 	snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%s%s",
-		  op->name, ext ? "x" : "",
+		  op->name,
+		  ext ? "x" : "",
 		  get_bw (instr) && op->type != MSP430_X ? ".b" : "");
 
 	if (op->as == MSP430_ADDR_AUTO) {
@@ -174,7 +174,11 @@ static ut8 output_twoop (ut16 instr,
 			    &data_ptr);
 
 	if (data_ptr != 0) {
-		cmd->ptr_addr = data_ptr;
+		if (op->radare_type == R_ANAL_OP_TYPE_CALL) {
+			cmd->jmp_addr = data_ptr;
+		} else {
+			cmd->ptr_addr = data_ptr;
+		}
 	}
 
 	if (cmd->operands[0] && dstbuf[0]) {
@@ -224,29 +228,28 @@ static void output_prefix(ut8 len, ut16 ext, char *prefix) {
 
 static ut8 decode_430x (ut16 instr, ut16 op1, ut16 op2, ut16 ext, struct msp430_cmd *cmd) {
 	const opcode_table *ot = opcode_find(instr);
-	//for (; ot->name[0] != '\0'; ot++) {
-		ut8 len = 0;
-		if (ot) {
-			snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
-				  ot->name, ext ? 'x' : '\0');
+	ut8 len = 0;
+	if (ot) {
+		snprintf (cmd->instr, MSP430_INSTR_MAXLEN - 1, "%s%c",
+			  ot->name, ext ? 'x' : '\0');
 
-			switch (ot->ad) {
-			case MSP430_ADDR_JUMP:
-				len = 2 + output_jump (instr, cmd);
-				break;
+		switch (ot->ad) {
+		case MSP430_ADDR_JUMP:
+			len = 2 + output_jump (instr, cmd);
+			break;
 
-			case MSP430_ADDR_ONEOP:
-				len = 2 + output_oneop (instr, ext, op1, cmd);
-				break;
+		case MSP430_ADDR_ONEOP:
+			len = 2 + output_oneop (instr, ext, op1, cmd);
+			break;
 
-			default:
-				len = 2 + output_twoop (instr, ext, op1, op2, ot, cmd);
-				break;
-			}
-			output_prefix(len, ext, cmd->prefix);
-			return len;
+		default:
+			len = 2 + output_twoop (instr, ext, op1, op2, ot, cmd);
+			break;
 		}
-		//}
+		cmd->op = ot;
+		output_prefix(len, ext, cmd->prefix);
+		return len;
+	}
 	return -1;
 }
 
