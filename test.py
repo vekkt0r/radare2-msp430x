@@ -2,11 +2,47 @@ import unittest
 import subprocess
 from anal_wrapper import Anal, RAnalOp, RAnalOpType
 
-class TestDisas(unittest.TestCase):
-
+class TestMeta(unittest.TestCase):
     instructions = [
-        ('mov @r10, r9', '294a', RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV))
+        (
+            'mov @r10, r9',
+            '294a',
+            RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV)
+        ),
+        (
+            'mov #-1, &0xc002',
+            'b24302c0',
+            RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV, ptr=0xc002)
+        ),
+        (
+            'call #0xc096',
+            'b01296c0',
+            RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_CALL, jump=0xc096)
+        ),
+        (
+            'mova &0x12030, r9',
+            '29013020',
+            RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV, ptr=0x12030)
+        )
     ]
+
+    def dis(self, ops):
+        return subprocess.check_output('LIBR_PLUGINS=. rasm2 -a msp430x -d %s' % (ops),
+                                       shell=True).rstrip()
+
+    @classmethod
+    def setUpClass(self):
+        self.analyzer = Anal()
+
+    def anal(self, ops):
+        return self.analyzer.analyze(ops)
+
+    def assertEqualOp(self, expected, actual):
+        '''Quick hack to compare RAnalOps and actually print what differs'''
+        self.assertEqual(expected.__dict__, actual.__dict__)
+
+
+class TestDisas(unittest.TestCase):
 
     def dis(self, ops):
         return subprocess.check_output('LIBR_PLUGINS=. rasm2 -a msp430x -d %s' % (ops),
@@ -189,32 +225,27 @@ class TestDisas(unittest.TestCase):
         }
         self.helper_test_set(ops)
 
-class TestAnal(unittest.TestCase):
-    def test_mov(self):
-        a = Anal()
-        # mov @r10, r9
-        self.assertEqualOp(a.analyze('294a'),
-                           RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV))
-
-        # Should absolute addressing have data pointer set?
-        # mov #-1, &0xc002
-        self.assertEqualOp(a.analyze('b24302c0'),
-                         RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV,
-                                 ptr=0xc002))
-        # call #0xc096
-        self.assertEqualOp(a.analyze('b01296c0'),
-                         RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_CALL,
-                                 jump=0xc096))
-
-        # '29013020': 'mova &0x12030, r9',
-        self.assertEqualOp(a.analyze('29013020'),
-                         RAnalOp(RAnalOpType.R_ANAL_OP_TYPE_MOV,
-                                 ptr=0x12030))
-
-    def assertEqualOp(self, expected, actual):
-        '''Quick hack to compare RAnalOps and actually print what differs'''
-        self.assertEqual(expected.__dict__, actual.__dict__)
-
-
 if __name__ == '__main__':
+    def create_asm_test(instr):
+        def do_asm_test(self):
+            self.assertEqual(self.dis(instr[1]), instr[0])
+        return do_asm_test
+
+    def create_anal_test(instr):
+        def do_anal_test(self):
+            self.assertEqualOp(self.anal(instr[1]), instr[2])
+        return do_anal_test
+
+    def add_test_method(method):
+        setattr(TestMeta, method.__name__, method)
+
+    for instr in TestMeta.instructions:
+        asm_test = create_asm_test((instr))
+        asm_test.__name__ = 'test_asm_%s' % (instr[1])
+        add_test_method(asm_test)
+
+        anal_test = create_anal_test((instr))
+        anal_test.__name__ = 'test_anal_%s' % (instr[1])
+        add_test_method(anal_test)
+
     unittest.main()
